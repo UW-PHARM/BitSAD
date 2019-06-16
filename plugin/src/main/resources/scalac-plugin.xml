@@ -1,0 +1,4 @@
+<plugin>
+  <name>bitsad-plugin</name>
+  <classname>com.github.uw-pharm.BsChkr</classname>
+</plugin>

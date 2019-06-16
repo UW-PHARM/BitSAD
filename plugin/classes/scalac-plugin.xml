@@ -1,0 +1,4 @@
+<plugin>
+  <name>bitsad</name>
+  <classname>localhost.BsChkr</classname>
+</plugin>
