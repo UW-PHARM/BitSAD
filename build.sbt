@@ -49,7 +49,7 @@ inThisBuild(List(
     scmInfo := Some(ScmInfo(url("https://github.com/UW-PHARM/BitSAD.git"), "scm:git:git@github.com:UW-PHARM/BitSAD.git")),
 
     // These are the sbt-release-early settings to configure
-    pgpPublicRing := file("/groups/ece/ececompeng/lipasti/bitsad/pubring.asc"),
-    pgpSecretRing := file("/groups/ece/ececompeng/lipasti/bitsad/secring.asc"),
+    pgpPublicRing := file("./travis/local.pubring.asc"),
+    pgpSecretRing := file("./travis/local.secring.asc"),
     releaseEarlyWith in Global := SonatypePublisher
 ))
