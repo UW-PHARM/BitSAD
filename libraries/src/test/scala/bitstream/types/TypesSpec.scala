@@ -4,24 +4,24 @@ import org.scalatest._
 import org.scalactic.TolerantNumerics._
 
 class TypesSpec extends FunSuite {
-  test("Bitstream --- value test") {
-    var stream = Bitstream(0.4)
+  test("SBitstream --- value test") {
+    var stream = SBitstream(0.4)
     assert(stream.value === 0.4)
     stream.value = 0.5
     assert(stream.value === 0.5)
     assertThrows[IllegalArgumentException] {
       stream.value = 5.0
     }
-    val saturatedStream = Bitstream(2.0)
+    val saturatedStream = SBitstream(2.0)
     assert(saturatedStream.value === 1.0)
   }
 
-  test("Bitstream --- == and != operator test") {
-    var a = Bitstream(0.1)
-    var b = Bitstream(-0.2)
-    var c = Bitstream(0.1)
-    var d = Bitstream(-0.2)
-    var e = Bitstream(1.0)
+  test("SBitstream --- == and != operator test") {
+    var a = SBitstream(0.1)
+    var b = SBitstream(-0.2)
+    var c = SBitstream(0.1)
+    var d = SBitstream(-0.2)
+    var e = SBitstream(1.0)
 
     assert((a == b) === false)
     assert((a == c) === true)
@@ -41,23 +41,23 @@ class TypesSpec extends FunSuite {
     assert((e != 1.toLong) === false)
   }
 
-  test("Bitstream --- + operator test") {
-    var x = Bitstream(0.2)
-    var y = Bitstream(0.3)
-    var z = Bitstream(-0.1)
+  test("SBitstream --- + operator test") {
+    var x = SBitstream(0.2)
+    var y = SBitstream(0.3)
+    var z = SBitstream(-0.1)
 
-    assert((x + y) === Bitstream(0.5))
-    assert((x + z) === Bitstream(0.1))
-    assert((z + z) === Bitstream(-0.2))
-    assert((x + z + z + z) === Bitstream(-0.1))
+    assert((x + y) === SBitstream(0.5))
+    assert((x + z) === SBitstream(0.1))
+    assert((z + z) === SBitstream(-0.2))
+    assert((x + z + z + z) === SBitstream(-0.1))
   }
 
-  test("Bitstream --- - operator test") {
+  test("SBitstream --- - operator test") {
     implicit val doubleEquality = tolerantDoubleEquality(0.001)
 
-    var x = Bitstream(0.2)
-    var y = Bitstream(0.3)
-    var z = Bitstream(-0.1)
+    var x = SBitstream(0.2)
+    var y = SBitstream(0.3)
+    var z = SBitstream(-0.1)
 
     // need to compare using .value in order to use tolerant equality tests
     assert((y - x).value === 0.1)
@@ -67,12 +67,12 @@ class TypesSpec extends FunSuite {
     assert((z - x).value === -0.3)
   }
 
-  test("Bitstream --- * operator test") {
+  test("SBitstream --- * operator test") {
     implicit val doubleEquality = tolerantDoubleEquality(0.001)
 
-    var x = Bitstream(0.2)
-    var y = Bitstream(0.3)
-    var z = Bitstream(-0.1)
+    var x = SBitstream(0.2)
+    var y = SBitstream(0.3)
+    var z = SBitstream(-0.1)
 
     // need to compare using .value in order to use tolerant equality tests
     assert((x * y).value === 0.06)
@@ -80,31 +80,31 @@ class TypesSpec extends FunSuite {
     assert((z * z).value === 0.01)
   }
 
-  test("Bitstream --- / operator test") {
-    var x = Bitstream(0.2)
-    var y = Bitstream(0.4)
-    var z = Bitstream(-0.4)
+  test("SBitstream --- / operator test") {
+    var x = SBitstream(0.2)
+    var y = SBitstream(0.4)
+    var z = SBitstream(-0.4)
 
-    assert((x / y) === Bitstream(0.5))
-    assert((x / z) === Bitstream(-0.5))
-    assert((z / z) === Bitstream(1.0))
-    assert((y / x) === Bitstream(1.0))
+    assert((x / y) === SBitstream(0.5))
+    assert((x / z) === SBitstream(-0.5))
+    assert((z / z) === SBitstream(1.0))
+    assert((y / x) === SBitstream(1.0))
   }
 
-  test("Bitstream --- sqrt() test") {
-    var x = Bitstream(0.5)
-    var y = Bitstream(-0.5)
+  test("SBitstream --- sqrt() test") {
+    var x = SBitstream(0.5)
+    var y = SBitstream(-0.5)
 
-    assert((Bitstream.sqrt(x) == math.sqrt(0.5)) === true)
-    assert(Bitstream.sqrt(y).value.isNaN === true)
+    assert((SBitstream.sqrt(x) == math.sqrt(0.5)) === true)
+    assert(SBitstream.sqrt(y).value.isNaN === true)
   }
 
-  test("Bitstream --- abs() test") {
-    var x = Bitstream(0.5)
-    var y = Bitstream(-0.5)
+  test("SBitstream --- abs() test") {
+    var x = SBitstream(0.5)
+    var y = SBitstream(-0.5)
 
-    assert((Bitstream.abs(x) == 0.5) === true)
-    assert((Bitstream.abs(y) == 0.5) === true)
+    assert((SBitstream.abs(x) == 0.5) === true)
+    assert((SBitstream.abs(y) == 0.5) === true)
   }
 
   test("Matrix --- constructor test") {
@@ -345,30 +345,30 @@ class TypesSpec extends FunSuite {
     }
   }
 
-  test("Matrix[Bitstream] --- constructor test") {
-    var A = Matrix[Bitstream](2, 2)
+  test("Matrix[SBitstream] --- constructor test") {
+    var A = Matrix[SBitstream](2, 2)
 
     assert(A.rows === 2)
     assert(A.cols === 2)
     assert(A.size === (2, 2))
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
+      A(i, j) = SBitstream(i - j)
     }
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
       assert(A(i, j).value === i - j)
     }
   }
 
-  test("Matrix[Bitstream] --- == and != operator test") {
-    var A = Matrix[Bitstream](2, 2)
-    var B = Matrix[Bitstream](2, 2)
-    var C = Matrix[Bitstream](2, 2)
+  test("Matrix[SBitstream] --- == and != operator test") {
+    var A = Matrix[SBitstream](2, 2)
+    var B = Matrix[SBitstream](2, 2)
+    var C = Matrix[SBitstream](2, 2)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(i - j)
-      C(i, j) = Bitstream(j - i)
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(i - j)
+      C(i, j) = SBitstream(j - i)
     }
     assert((A == B) === true)
     assert((B == C) === false)
@@ -376,172 +376,172 @@ class TypesSpec extends FunSuite {
     assert((A != B) === false)
   }
 
-  test("Matrix[Bitstream] --- T operator test") {
-    var A = Matrix[Bitstream](4, 3)
-    var B = Matrix[Bitstream](3, 4)
+  test("Matrix[SBitstream] --- T operator test") {
+    var A = Matrix[SBitstream](4, 3)
+    var B = Matrix[SBitstream](3, 4)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(j, i) = Bitstream(i - j)
+      A(i, j) = SBitstream(i - j)
+      B(j, i) = SBitstream(i - j)
     }
     assert(A.T === B)
   }
 
-  test("Matrix[Bitstream] --- zeros() test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix.zeros[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- zeros() test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix.zeros[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(0)
+      A(i, j) = SBitstream(0)
     }
 
     assert((A == B) === true)
   }
 
-  test("Matrix[Bitstream] --- ones() test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix.ones[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- ones() test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix.ones[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(1)
+      A(i, j) = SBitstream(1)
     }
 
     assert((A == B) === true)
   }
 
-  test("Matrix[Bitstream] --- eye() test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix.eye[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- eye() test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix.eye[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      if (i == j) A(i, j) = Bitstream(1)
-      else A(i, j) = Bitstream(0)
+      if (i == j) A(i, j) = SBitstream(1)
+      else A(i, j) = SBitstream(0)
     }
 
     assert((A == B) === true)
   }
 
-  test("Matrix[Bitstream] --- + operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- + operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(j - i)
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(j - i)
     }
-    assert((A + B) === Matrix.zeros[Bitstream](3, 3))
+    assert((A + B) === Matrix.zeros[SBitstream](3, 3))
   }
 
-  test("Matrix[Bitstream] --- - operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- - operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(i - j)
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(i - j)
     }
-    assert((A - B) === Matrix.zeros[Bitstream](3, 3))
+    assert((A - B) === Matrix.zeros[SBitstream](3, 3))
   }
 
-  test("Matrix[Bitstream] --- ** operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
-    var C = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- ** operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
+    var C = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(2)
-      C(i, j) = Bitstream(2 * (i - j))
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(2)
+      C(i, j) = SBitstream(2 * (i - j))
     }
     assert((A ** B) === C)
   }
 
-  test("Matrix[Bitstream] --- / operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
-    var C = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- / operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
+    var C = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(2 * (i - j))
-      B(i, j) = Bitstream(2)
-      C(i, j) = Bitstream(i - j)
+      A(i, j) = SBitstream(2 * (i - j))
+      B(i, j) = SBitstream(2)
+      C(i, j) = SBitstream(i - j)
     }
     assert((A / B) === C)
   }
 
-  test("Matrix[Bitstream] --- + (scalar) operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- + (scalar) operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(i - j + 2)
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(i - j + 2)
     }
-    assert((A + Bitstream(2)) === B)
+    assert((A + SBitstream(2)) === B)
   }
 
-  test("Matrix[Bitstream] --- - (scalar) operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- - (scalar) operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(i - j - 2)
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(i - j - 2)
     }
-    assert((A - Bitstream(2)) === Matrix.zeros[Bitstream](3, 3))
+    assert((A - SBitstream(2)) === Matrix.zeros[SBitstream](3, 3))
   }
 
-  test("Matrix[Bitstream] --- * (scalar) operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- * (scalar) operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(2 * (i - j))
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(2 * (i - j))
     }
-    assert((A * Bitstream(2)) === B)
+    assert((A * SBitstream(2)) === B)
   }
 
-  test("Matrix[Bitstream] --- / (scalar) operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- / (scalar) operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(2 * (i - j))
-      B(i, j) = Bitstream(i - j)
+      A(i, j) = SBitstream(2 * (i - j))
+      B(i, j) = SBitstream(i - j)
     }
-    assert((A / Bitstream(2)) === B)
+    assert((A / SBitstream(2)) === B)
   }
 
-  test("Matrix[Bitstream] --- * operator test") {
-    var A = Matrix[Bitstream](3, 3)
-    var B = Matrix[Bitstream](3, 3)
-    var C = Matrix[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- * operator test") {
+    var A = Matrix[SBitstream](3, 3)
+    var B = Matrix[SBitstream](3, 3)
+    var C = Matrix[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
-      A(i, j) = Bitstream(i - j)
-      B(i, j) = Bitstream(i - j)
+      A(i, j) = SBitstream(i - j)
+      B(i, j) = SBitstream(i - j)
 
       for (k <- 0 until A.cols) {
-        C(i, j) = Bitstream((i - k) * (k - j))
+        C(i, j) = SBitstream((i - k) * (k - j))
       }
     }
     assert((A * B) === C)
   }
 
-  test("Matrix[Bitstream] --- dot() test") {
-    var a = Matrix.ones[Bitstream](3, 1)
-    var b = Matrix.ones[Bitstream](3, 1)
+  test("Matrix[SBitstream] --- dot() test") {
+    var a = Matrix.ones[SBitstream](3, 1)
+    var b = Matrix.ones[SBitstream](3, 1)
 
-    a = a * Bitstream(1.0/3)
-    b = b * Bitstream(1.0/3)
+    a = a * SBitstream(1.0/3)
+    b = b * SBitstream(1.0/3)
 
     assert(a.dot(b).value === 1.0/3)
     assert(a.dot(b.T).value === 1.0/3)
     assert(a.T.dot(b.T).value === 1.0/3)
     assert(a.T.dot(b).value === 1.0/3)
 
-    var c = Matrix.ones[Bitstream](3, 3)
+    var c = Matrix.ones[SBitstream](3, 3)
     assertThrows[IllegalArgumentException] {
       c.dot(b)
     }
@@ -550,20 +550,20 @@ class TypesSpec extends FunSuite {
     }
   }
 
-  test("Matrix[Bitstream] --- sqrt() test") {
-    var A = Matrix.ones[Bitstream](3, 1)
+  test("Matrix[SBitstream] --- sqrt() test") {
+    var A = Matrix.ones[SBitstream](3, 1)
 
-    A = Matrix.sqrt(A * Bitstream(0.5))
+    A = Matrix.sqrt(A * SBitstream(0.5))
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
       assert(A(i, j).value === math.sqrt(0.5))
     }
   }
 
-  test("Matrix[Bitstream] --- norm() test") {
-    var A = Matrix.ones[Bitstream](3, 3)
-    var v = Matrix.ones[Bitstream](3, 1)
+  test("Matrix[SBitstream] --- norm() test") {
+    var A = Matrix.ones[SBitstream](3, 3)
+    var v = Matrix.ones[SBitstream](3, 1)
 
-    v = v * Bitstream(math.sqrt(1.0/3))
+    v = v * SBitstream(math.sqrt(1.0/3))
 
     assert(Matrix.norm(v).value === 1.0)
     assertThrows[NotImplementedError] {
@@ -590,8 +590,8 @@ class TypesSpec extends FunSuite {
     }
   }
 
-  test("Matrix[Bitstream] --- rand() test") {
-    var A = Matrix.rand[Bitstream](3, 3)
+  test("Matrix[SBitstream] --- rand() test") {
+    var A = Matrix.rand[SBitstream](3, 3)
 
     for (i <- 0 until A.rows; j <- 0 until A.cols) {
       assert((A(i, j) <= 1.0 && A(i, j) >= 0.0) === true)

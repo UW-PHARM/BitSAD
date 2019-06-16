@@ -3,7 +3,9 @@ cancelable in Global := true
 
 lazy val commonSettings = Seq(
   organization := "com.github.uw-pharm",
-  scalaVersion := "2.12.6"
+  scalaVersion := "2.12.6",
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test,
+  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 )
 
 lazy val root = (project in file("."))
@@ -37,9 +39,6 @@ lazy val plugin = (project in file("plugin"))
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
   )
   .dependsOn(libraries)
-
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test
-libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
 inThisBuild(List(
     // These are normal sbt settings to configure for release, skip if already defined

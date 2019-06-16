@@ -1,4 +1,4 @@
-package com.github.uw-pharm
+package com.github.uwpharm
 
 import scala.tools.nsc
 import nsc.Global
