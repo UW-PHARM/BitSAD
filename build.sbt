@@ -14,19 +14,19 @@ lazy val root = (project in file("."))
     version := "0.5",
     name := "bitsad"
   )
-  .aggregate(libraries, plugin)
+  .aggregate(libraries, macros, plugin)
 
 lazy val libraries = (project in file("libraries"))
   .settings(
     commonSettings,
-    name := "libraries"
+    name := "bitsad-libraries"
   )
   .dependsOn(macros)
 
 lazy val macros = (project in file("macros"))
   .settings(
     commonSettings,
-    name := "macros",
+    name := "bitsad-macros",
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
   )
 

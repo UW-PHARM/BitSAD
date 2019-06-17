@@ -7,9 +7,10 @@ script:
 jdk:
 - oraclejdk8
 before_install:
-- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then openssl aes-256-cbc -K $encrypted_d4760f527862_key
-  -iv $encrypted_d4760f527862_iv -in travis/secrets.tar.enc -out travis/secrets.tar
-  -d; tar xv -C travis -f travis/secrets.tar; fi
+- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then
+    openssl aes-256-cbc -K $encrypted_d4760f527862_key -iv $encrypted_d4760f527862_iv -in travis/secrets.tar.enc -out travis/secrets.tar -d;
+    tar xv -C travis -f travis/secrets.tar;
+  fi
 env:
   global:
   - secure: JQvdwuvh5NTDITaHc3Lge3/haymxrM+op3T1Og0rJh9gviKuLeM8Lxzmlu6lbIq2kv2zAbU7dxcfbfCGWAAvakgJfmIThZslmpH8RC1f6Ztc7drP0/B/DA8KG/bsBZXBNWdfrZQl3z2ajC8E5fr8q6nAOAh8NjBsE9rn38XbFGIbIsWXlUTfJtuWIhI11SCRyb49/umTDTtKRueHMUiBGxlG99iPfDbIL3QirNixNp9RbPdIurH8wpIrXOghPerXE9NM+Rt9Bh28UzAUT4NsWnhAuGsKXdIXaOXdenjpXxFQ0d+o5sFRxzZmiBxs/WjFOMgY1/b7mU10g6kCj6op2xnr+rtegR+MICW56szH/W1LR05SaMiMBJlTe3RVDl+oR1REejrU60Y4OvkCT600EqaDEcBS3bLG3x3ILN+PO2pLbAPo2adEgdPfWYhM+9//wDJE3HsH2hR68Sj6zTmLUsKGNu46O+f82O2Y2MH/b/6t0yuTMMur4jn2+zpWYh6Hrq4jnJJ/o1vBErCTYGISntw55GJV0wpFBgabex4A72wWYLQrdocMu7txpIspUeLr4RETybYglgF0eb/tWOxb8e7AGBjpg6jqp+x6eL5rVF9wmTKgseMLFixgeUQqdtIN1YMyHaDemMvsO5gBavM/mUCk86NzNP5EU3Fq581I4+M=
