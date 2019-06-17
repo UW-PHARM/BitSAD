@@ -1,4 +1,4 @@
 # BitSAD
-A domain-specific language for bitstream computing
+[![Build Status](https://travis-ci.com/UW-PHARM/BitSAD.svg?branch=master)](https://travis-ci.com/UW-PHARM/BitSAD)
 
-Test.
+A domain-specific language for bitstream computing.
