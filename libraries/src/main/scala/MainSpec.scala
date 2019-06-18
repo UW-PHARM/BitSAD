@@ -1,4 +1,4 @@
-import bitstream.compiler.NodeHandlers._
+// import bitstream.compiler.NodeHandlers._
 
 object MainSpec {
   val TEST_CODE = 7
