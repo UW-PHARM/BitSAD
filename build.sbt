@@ -38,7 +38,6 @@ lazy val plugin = (project in file("plugin"))
     assemblyJarName in assembly := "bitsad-plugin.jar",
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
   )
-  .dependsOn(libraries)
 
 inThisBuild(List(
     // These are normal sbt settings to configure for release, skip if already defined
