@@ -5,8 +5,8 @@ import scala.reflect.runtime.universe._
 import scala.reflect.runtime.currentMirror
 import scala.tools.reflect.ToolBox
 
-// import bitstream.types._
-// import bitstream.simulator.units._
+import bitstream.types._
+import bitstream.simulator.units._
 
 // Based on code from:
 // https://gist.github.com/xuwei-k/9ba39fe22f120cb098f4
