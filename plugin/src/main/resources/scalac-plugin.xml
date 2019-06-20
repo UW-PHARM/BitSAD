@@ -1,4 +1,4 @@
 <plugin>
   <name>bitsad-plugin</name>
-  <classname>com.github.uwpharm.BsChkr</classname>
+  <classname>com.github.uwpharm.BitSADPlugin</classname>
 </plugin>

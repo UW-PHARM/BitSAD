@@ -18,7 +18,7 @@ import bitstream.compiler.NodeHandlers._
 import bitstream.compiler.TypeIdentifiers._
 import bitstream.compiler.eval._
 
-class BsChkr(val global: Global) extends Plugin {
+class BitSADPlugin(val global: Global) extends Plugin {
 
   import global._
 
@@ -49,11 +49,11 @@ class BsChkr(val global: Global) extends Plugin {
 
   private object ImporterComponent extends PluginComponent {
 
-    val global: BsChkr.this.global.type = BsChkr.this.global
+    val global: BitSADPlugin.this.global.type = BitSADPlugin.this.global
     val runsAfter = List("parser")
     // override val runsRightAfter = Some("parser")
     // override val runsBefore = List("namer")
-    val phaseName = s"${BsChkr.this.name}-importer"
+    val phaseName = s"${BitSADPlugin.this.name}-importer"
 
     class ImporterPhase(prev: Phase) extends StdPhase(prev) {
 
@@ -80,11 +80,11 @@ class BsChkr(val global: Global) extends Plugin {
 
   private object ConstantReplaceComponent extends PluginComponent with TypingTransformers {
 
-    val global: BsChkr.this.global.type = BsChkr.this.global
+    val global: BitSADPlugin.this.global.type = BitSADPlugin.this.global
     val runsAfter = List(ImporterComponent.phaseName)
     // override val runsRightAfter = Some("parser")
     // override val runsBefore = List("namer")
-    val phaseName = s"${BsChkr.this.name}-constrepl"
+    val phaseName = s"${BitSADPlugin.this.name}-constrepl"
     def newPhase(_prev: Phase) = new StdPhase(_prev) {
       def apply(unit: CompilationUnit) {
         importsMap(unit.source.toString).setDefaultParams(getFinalVals(unit.body))
@@ -163,11 +163,11 @@ class BsChkr(val global: Global) extends Plugin {
 
   private object ModuleComponent extends PluginComponent {
 
-    val global: BsChkr.this.global.type = BsChkr.this.global
+    val global: BitSADPlugin.this.global.type = BitSADPlugin.this.global
     val runsAfter = List(ConstantReplaceComponent.phaseName)
     // override val runsRightAfter = Some("parser")
     override val runsBefore = List("namer")
-    val phaseName = s"${BsChkr.this.name}-moduleparser"
+    val phaseName = s"${BitSADPlugin.this.name}-moduleparser"
 
     class ModuleParsePhase(prev: Phase) extends StdPhase(prev) {
 
@@ -208,11 +208,11 @@ class BsChkr(val global: Global) extends Plugin {
 
   private object OptimizerComponent extends PluginComponent with TypingTransformers {
 
-    val global: BsChkr.this.global.type = BsChkr.this.global
+    val global: BitSADPlugin.this.global.type = BitSADPlugin.this.global
     val runsAfter = List(ConstantReplaceComponent.phaseName)
     // override val runsRightAfter = Some("parser")
     override val runsBefore = List("namer")
-    val phaseName = s"${BsChkr.this.name}-optimize"
+    val phaseName = s"${BitSADPlugin.this.name}-optimize"
     def newPhase(_prev: Phase) = new StdPhase(_prev) {
       def apply(unit: CompilationUnit) {
         unit.body = new OptimizationTransformer(unit).transform(unit.body)
@@ -263,7 +263,7 @@ class BsChkr(val global: Global) extends Plugin {
           case Apply(Apply(Select(src1, TermName(op)), List(src2)), List(src3)) => {
             var optimizedSrc1 = optimizeStatement(src1)
             var optimizedSrc2 = optimizeStatement(src2)
-            var newOp: BsChkr.this.global.TermName = TermName(op)
+            var newOp: BitSADPlugin.this.global.TermName = TermName(op)
 
             var optimizedNode =
               atPos(statement.pos.focus)(q"$optimizedSrc1.$newOp($optimizedSrc2)($src3)")
@@ -272,7 +272,7 @@ class BsChkr(val global: Global) extends Plugin {
           case Apply(Select(src1, TermName(op)), List(src2)) => {
             var optimizedSrc1 = optimizeStatement(src1)
             var optimizedSrc2 = optimizeStatement(src2)
-            var newOp: BsChkr.this.global.TermName = TermName(op)
+            var newOp: BitSADPlugin.this.global.TermName = TermName(op)
 
             var optimizedNode =
               atPos(statement.pos.focus)(q"$optimizedSrc1.$newOp($optimizedSrc2)")
@@ -280,7 +280,7 @@ class BsChkr(val global: Global) extends Plugin {
           }
           case Select(src1, TermName(op)) => {
             var optimizedSrc1 = optimizeStatement(src1)
-            var newOp: BsChkr.this.global.TermName = TermName(op)
+            var newOp: BitSADPlugin.this.global.TermName = TermName(op)
 
             var optimizedNode = atPos(statement.pos.focus)(q"$optimizedSrc1.$newOp")
             optimizeStatementHelper(optimizedNode)
@@ -321,10 +321,10 @@ class BsChkr(val global: Global) extends Plugin {
       def distributeMultConst(tree: Tree, c: Tree): Tree = {
         // println(s"[DISTR] $c * ($tree)")
 
-        var nodes: List[BsChkr.this.global.Tree] = List()
-        var ops: List[BsChkr.this.global.TermName] = List()
+        var nodes: List[BitSADPlugin.this.global.Tree] = List()
+        var ops: List[BitSADPlugin.this.global.TermName] = List()
 
-        var outputTree: BsChkr.this.global.Tree = EmptyTree
+        var outputTree: BitSADPlugin.this.global.Tree = EmptyTree
         if (isTreeAdditive(tree)) {
           tree.children.dropRight(1).foreach((node: Tree) => node match {
             case Select(src, op) if op == nme.ADD || op == nme.SUB => {
@@ -365,9 +365,9 @@ class BsChkr(val global: Global) extends Plugin {
       }
 
       def collectLikeTerms(tree: Tree): Tree = {
-        var coefficients: List[BsChkr.this.global.Tree] = List()
-        var nodes: List[BsChkr.this.global.Tree] = List()
-        var ops: List[BsChkr.this.global.TermName] = List()
+        var coefficients: List[BitSADPlugin.this.global.Tree] = List()
+        var nodes: List[BitSADPlugin.this.global.Tree] = List()
+        var ops: List[BitSADPlugin.this.global.TermName] = List()
 
         if (isTreeAdditive(tree)) {
           getLikeTerms(tree) match {
@@ -399,11 +399,11 @@ class BsChkr(val global: Global) extends Plugin {
 
           // println(termMap)
 
-          var outputTree: BsChkr.this.global.Tree = EmptyTree
+          var outputTree: BitSADPlugin.this.global.Tree = EmptyTree
           val builder = (x: String, ast: Tree) => {
-            var newTree: BsChkr.this.global.Tree = EmptyTree
-            var coefficient: BsChkr.this.global.Tree = EmptyTree
-            var node: BsChkr.this.global.Tree = EmptyTree
+            var newTree: BitSADPlugin.this.global.Tree = EmptyTree
+            var coefficient: BitSADPlugin.this.global.Tree = EmptyTree
+            var node: BitSADPlugin.this.global.Tree = EmptyTree
             termMap(x) match {
               case (n, c) => {
                 coefficient = c
@@ -538,14 +538,14 @@ class BsChkr(val global: Global) extends Plugin {
 
   private object HDLComponent extends PluginComponent {
 
-    val global: BsChkr.this.global.type = BsChkr.this.global
+    val global: BitSADPlugin.this.global.type = BitSADPlugin.this.global
     val runsAfter = List[String]("refchecks")
-    val phaseName = s"${BsChkr.this.name}-hdlgeneration"
+    val phaseName = s"${BitSADPlugin.this.name}-hdlgeneration"
     def newPhase(_prev: Phase) = new HDLGenPhase(_prev)
 
     class HDLGenPhase(prev: Phase) extends StdPhase(prev) {
 
-      override def name = BsChkr.this.name
+      override def name = BitSADPlugin.this.name
 
       // Data structures for storing DFG
       var funcBody            = ""
@@ -1079,7 +1079,7 @@ class BsChkr(val global: Global) extends Plugin {
       }
 
       def detectInternalUnit(tree: Tree): Tree = {
-        var outputTree: BsChkr.this.global.Tree = EmptyTree
+        var outputTree: BitSADPlugin.this.global.Tree = EmptyTree
         tree match {
           case Select(dontcare, src) => {
             if (dontcare.toString == "Module.this") {
@@ -1276,8 +1276,8 @@ class BsChkr(val global: Global) extends Plugin {
         bw.close()
       }
 
-    } // end of class BsChkrPhase
+    } // end of class BitSADPluginPhase
 
   } // end of object Component extends PluginComponent
 
-} // end of class BsChkr
+} // end of class BitSADPlugin

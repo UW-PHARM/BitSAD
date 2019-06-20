@@ -1,4 +1,4 @@
 <plugin>
-  <name>bitsad</name>
-  <classname>localhost.BsChkr</classname>
+  <name>bitsad-plugin</name>
+  <classname>localhost.BitSADPlugin</classname>
 </plugin>
