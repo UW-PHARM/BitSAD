@@ -1,0 +1,3 @@
+[submodule "BitBench"]
+	path = BitBench
+	url = https://github.com/UW-PHARM/BitBench
