@@ -100,3 +100,17 @@ object IterativeSVD {
 ### Note about BitBench
 
 The BitBench folder is a Git submodule. When you clone this repo, add the `--recursive` flag to your Git command to also clone the BitBench repo.
+
+## Contributing
+
+We welcome all kinds of contributions including PRs, sample code, and issues.
+
+### Issues
+
+If you have a feature request or an issue with BitSAD, please file an issue on GitHub. Please file issues relating to BitBench with the BitBench repository.
+
+### Pull Requests
+
+If you would like to add to BitSAD, we welcome PRs. Submit a PR to the `staging` branch. This allows us to move around files/reorganize the repo before bringing your code into the `master` branch. *All commits to the master branch create versions on Sonatype*.
+
+If you want to add a new operator, etc. to the project, then please email us or file an issue, and we can direct you on how to proceed. Later versions of BitSAD will likely modularize this process to make it very simple and straightforward.
