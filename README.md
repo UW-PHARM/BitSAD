@@ -96,3 +96,7 @@ object IterativeSVD {
   }
 }
 ```
+
+### Note about BitBench
+
+The BitBench folder is a Git submodule. When you clone this repo, add the `--recursive` flag to your Git command to also clone the BitBench repo.
