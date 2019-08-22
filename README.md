@@ -37,6 +37,10 @@ scalacOptions += s"-P:bitsad-plugin:top:<your top level file>.scala"
 
 If you want working examples of installation, please refer to `BitBench/build.sbt`.
 
+### Verilog Submodules
+
+The generated Verilog requires submodules that implement each operator. These modules are packaged separately in `verilog-lib.tar.gz`. Download the compressed file, then uncompress it into the directory containing your Verilog project source code.
+
 ## A Sample BitSAD Program
 
 Below is a sample BitSAD module. The names of traits, objects, classes, and functions must be as specified (e.g. `Parameters`, `Module`, `loop`, etc.). Please refer to `BitBench` for working example programs.
