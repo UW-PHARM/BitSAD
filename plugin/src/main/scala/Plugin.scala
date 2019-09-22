@@ -818,7 +818,7 @@ class BitSADPlugin(val global: Global) extends Plugin {
               types = checkTypes(List(actualSrc1, actualSrc2))
 
               // Parse operands
-              if (!isMatrixObject(actualSrc1))
+              if (!isMatrixObject(actualSrc1) && !isSBitstreamObject(actualSrc1))
                 src1Name = scanStatement(actualSrc1, "_l_", statementID, levelID + 1)
               src2Name = scanStatement(actualSrc2, "_r_", statementID, levelID + 1)
             }
@@ -839,7 +839,7 @@ class BitSADPlugin(val global: Global) extends Plugin {
             val types = checkTypes(List(actualSrc1, actualSrc2))
 
             // Parse operands
-            if (!isMatrixObject(actualSrc1))
+            if (!isMatrixObject(actualSrc1) && !isSBitstreamObject(actualSrc1))
               src1Name = scanStatement(actualSrc1, "_l_", statementID, levelID + 1)
             src2Name = scanStatement(actualSrc2, "_r_", statementID, levelID + 1)
             parseOperator(op, src1Name, src2Name, output, types)
@@ -961,6 +961,19 @@ class BitSADPlugin(val global: Global) extends Plugin {
                   case _ => warning("Trying to norm type with no associated Verilog module")
                 }
               }
+              case "sqrt" => {
+                // src1 is the "SBitstream" object
+                // Get sizes
+                getSize(src2, types(0)) match {case (name, rows, cols) => {src2Name = name; src2R = rows; src2C = cols}}
+
+                // Call handler
+                types match {
+                  case List(SBITSTREAM) =>
+                    sSqrtHandler.create(List(src2Name), dest, List((src2R, src2C)), netList)
+                      match {case (list, str) => {netList = list; funcBody = funcBody + str}}
+                  case _ => warning("Trying to sqrt type with no associated Verilog module")
+                }
+              }
               case "$colon$div" => {
                 // Get sizes
                 getSize(src1, types(0)) match {case (name, rows, cols) => {src1Name = name; src1R = rows; src1C = cols}}
@@ -1048,6 +1061,7 @@ class BitSADPlugin(val global: Global) extends Plugin {
             case r"(?:.*\.type)" if inputMap contains operand.toString =>
               typeList = typeList :+ inputMap(operand.toString)
             case "bitstream.types.Matrix.type" => // ignore Matrix objects (eg. Matrix.norm())
+            case "bitstream.types.SBitstream.type" => // ignore SBitstream objects (eg. SBitstream.sqrt())
             case default => warning(s"Unrecognized type in checkTypes(): $default")
           }
           case r"(?:(?:Double|Int|Long)\([\d\.\-]+E?[\d\-]*\))" =>
@@ -1097,6 +1111,8 @@ class BitSADPlugin(val global: Global) extends Plugin {
       }
 
       def isMatrixObject(node: Tree): Boolean = node.toString.trim == "bitstream.types.Matrix"
+
+      def isSBitstreamObject(node: Tree): Boolean = node.toString.trim == "bitstream.types.SBitstream"
 
       def getSize(name: String, typeId: TypeIdentity): (String, Int, Int) = {
         if (netList contains name) {
