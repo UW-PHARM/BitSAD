@@ -4,6 +4,7 @@ cancelable in Global := true
 lazy val commonSettings = Seq(
   organization := "com.github.uw-pharm",
   scalaVersion := "2.12.6",
+  version := "0.5.2",
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test,
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 )
@@ -11,7 +12,6 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file("."))
   .settings(
     commonSettings,
-    version := "0.5",
     name := "bitsad"
   )
   .aggregate(libraries, macros, plugin)

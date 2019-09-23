@@ -641,6 +641,21 @@ object NodeHandlers {
 
   }
 
+  class SCrossHandler extends NodeHandler {
+
+    protected var id = 0
+
+    def create(inputs: List[String], output: String, sizes: List[Tuple2[Int, Int]], netList: Netlist):
+              (Netlist, String) = {
+      // Create copy of netlist
+      var newNetList = netList
+
+      // Determine new names for netlist
+      var newNames = inputs :+ outputs
+    }
+
+  }
+
   class SDivHandler extends NodeHandler {
 
     protected var id = 0
