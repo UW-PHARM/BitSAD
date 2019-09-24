@@ -182,43 +182,22 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
 
   def cross(that: Matrix[A]): Matrix[A] = {
     var result = Matrix[A](_numRows, _numCols)
+
+    var body = (x: Int, y: Int) => {
+      if (x != y)
+        throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
+      else {
+        result(0) = this(1) * that(2) - this(2) * that(1)
+        result(1) = this(0) * that(2) - this(2) * that(0)
+        result(2) = this(0) * that(1) - this(1) * that(0)
+      }
+    }
+
     (_numRows, _numCols, that.rows, that.cols) match {
-      case (1, x, 1, y) => {
-        if (x != y)
-          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
-        else {
-          result(0) = this(1) * that(2) - this(2) * that(1)
-          result(1) = this(0) * that(2) - this(2) * that(0)
-          result(2) = this(0) * that(1) - this(1) * that(0)
-        }
-      }
-      case (x, 1, 1, y) => {
-        if (x != y)
-          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
-        else {
-          result(0) = this(1) * that(2) - this(2) * that(1)
-          result(1) = this(0) * that(2) - this(2) * that(0)
-          result(2) = this(0) * that(1) - this(1) * that(0)
-        }
-      }
-      case (x, 1, y, 1) => {
-        if (x != y)
-          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
-        else {
-          result(0) = this(1) * that(2) - this(2) * that(1)
-          result(1) = this(0) * that(2) - this(2) * that(0)
-          result(2) = this(0) * that(1) - this(1) * that(0)
-        }
-      }
-      case (1, x, y, 1) => {
-        if (x != y)
-          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
-        else {
-          result(0) = this(1) * that(2) - this(2) * that(1)
-          result(1) = this(0) * that(2) - this(2) * that(0)
-          result(2) = this(0) * that(1) - this(1) * that(0)
-        }
-      }
+      case (1, x, 1, y) => body(x, y)
+      case (x, 1, 1, y) => body(x, y)
+      case (x, 1, y, 1) => body(x, y)
+      case (1, x, y, 1) => body(x, y)
       case _ => throw new IllegalArgumentException("Cannot take the cross product of a matrix")
     }
 
