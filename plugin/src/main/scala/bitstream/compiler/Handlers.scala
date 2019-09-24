@@ -641,7 +641,7 @@ object NodeHandlers {
 
   }
 
-  class SCrossHandler extends NodeHandler {
+  class SCrossProdHandler extends NodeHandler {
 
     protected var id = 0
 
@@ -650,8 +650,163 @@ object NodeHandlers {
       // Create copy of netlist
       var newNetList = netList
 
-      // Determine new names for netlist
-      var newNames = inputs :+ outputs
+      // Add inputs to netlist
+      for ((name, size) <- (inputs zip sizes).toMap) {
+        newNetList.addWire(name, size, true, false)
+      }
+
+      // Add internal wires to netlist
+      newNetList.addWire(s"cross${id}_multPP_P", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multPP_M", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multPM_P", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multPM_M", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multMP_P", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multMP_M", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multMM_P", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_multMM_M", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_PP1", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_PM1", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_PP2", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_PM2", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_SP1", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_SM1", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_SP2", sizes.head, false, false)
+      newNetList.addWire(s"cross${id}_SM1", sizes.head, false, false)
+
+      // Add outputs to netlist
+      newNetList.addWire(output, sizes.head, true, false)
+
+      // Create Verilog string
+      var outputString = s"""
+      |$stdComment
+      |stoch_cross_prod cross${id}_prodPP(
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .u(${inputs(0)}_p),
+      |        .v(${inputs(1)}_p),
+      |        .y_p(cross${id}_multPP_P),
+      |        .y_m(cross${id}_multPP_M)
+      |    );
+      |stoch_cross_prod cross${id}_prodPM(
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .u(${inputs(0)}_p),
+      |        .v(${inputs(1)}_m),
+      |        .y_p(cross${id}_multPM_P),
+      |        .y_m(cross${id}_multPM_M)
+      |    );
+      |stoch_cross_prod cross${id}_prodMP(
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .u(${inputs(0)}_m),
+      |        .v(${inputs(1)}_p),
+      |        .y_p(cross${id}_multMP_P),
+      |        .y_m(cross${id}_multMP_M)
+      |    );
+      |stoch_cross_prod cross${id}_prodMM(
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .u(${inputs(0)}_m),
+      |        .v(${inputs(1)}_m),
+      |        .y_p(cross${id}_multMM_P),
+      |        .y_m(cross${id}_multMM_M)
+      |    );
+      |stoch_add_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_addPartialPP1 (
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .A(cross${id}_multPP_P),
+      |        .B(cross${id}_multPM_P),
+      |        .Y(cross${id}_PP1)
+      |    );
+      |stoch_add_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_addPartialPM1 (
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .A(cross${id}_multPP_M),
+      |        .B(cross${id}_multPM_M),
+      |        .Y(cross${id}_PM1)
+      |    );
+      |stoch_add_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_addPartialPP2 (
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .A(cross${id}_multMM_P),
+      |        .B(cross${id}_multMP_P),
+      |        .Y(cross${id}_PP2)
+      |    );
+      |stoch_add_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_addPartialPM2 (
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .A(cross${id}_multMM_M),
+      |        .B(cross${id}_multMP_M),
+      |        .Y(cross${id}_PM2)
+      |    );
+      |stoch_sat_sub_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_subP1 (
+      |        .A(cross${id}_PP1),
+      |        .B(cross${id}_PM1),
+      |        .Y(cross${id}_SP1)
+      |    );
+      |stoch_sat_sub_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_subM1 (
+      |        .A(cross${id}_PM1),
+      |        .B(cross${id}_PP1),
+      |        .Y(cross${id}_SM1)
+      |    );
+      |stoch_sat_sub_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_subP2 (
+      |        .A(cross${id}_PP2),
+      |        .B(cross${id}_PM2),
+      |        .Y(cross${id}_SP2)
+      |    );
+      |stoch_sat_sub_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_subM2 (
+      |        .A(cross${id}_PM2),
+      |        .B(cross${id}_PP2),
+      |        .Y(cross${id}_SM2)
+      |    );
+      |stoch_add_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_addP (
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .A(cross${id}_SP1),
+      |        .B(cross${id}_SP2),
+      |        .Y(${output}_p)
+      |    );
+      |stoch_add_mat # (
+      |        .NUM_ROWS(${sizes.head._1}),
+      |        .NUM_COLS(${sizes.head._2})
+      |    ) cross${id}_addM (
+      |        .CLK(CLK),
+      |        .nRST(nRST),
+      |        .A(cross${id}_SM1),
+      |        .B(cross${id}_SM2),
+      |        .Y(${output}_m)
+      |    );
+      """.stripMargin
+
+      id += 1
+      (newNetList, outputString)
     }
 
   }

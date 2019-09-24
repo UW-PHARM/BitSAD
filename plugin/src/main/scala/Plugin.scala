@@ -562,6 +562,7 @@ class BitSADPlugin(val global: Global) extends Plugin {
       var sAddHandler          = new SAddHandler() // _ + _
       var sSubHandler          = new SSubHandler() // _ - _
       var sMulHandler          = new SMatrixMultiplyHandler() // _ * _
+      var sCrossProdHandler    = new SCrossProdHandler() // _.cross(_)
       var sDivHandler          = new SDivHandler() // _ / _
       var sFixedGainDivHandler = new SFixedGainDivHandler() // _ :/ constant
       var sL2NormHandler       = new SL2NormHandler() // Matrix.norm(_)
@@ -985,6 +986,19 @@ class BitSADPlugin(val global: Global) extends Plugin {
                     sFixedGainDivHandler.create(List(src1Name, src2Name), dest, List((src1R, src1C), (1, 1)), netList)
                       match {case (list, str) => {netList = list; funcBody = funcBody + str}}
                   case _ => warning("Trying to fgdiv types with no associated Verilog module")
+                }
+              }
+              case "cross" => {
+                // Get sizes
+                getSize(src1, types(0)) match {case (name, rows, cols) => {src1Name = name; src1R = rows; src1C = cols}}
+                getSize(src2, types(1)) match {case (name, rows, cols) => {src2Name = name; src2R = rows; src2C = cols}}
+
+                // Call handler
+                types match {
+                  case List(SBITSTREAM, SBITSTREAM) =>
+                    sCrossProdHandler.create(List(src1Name, src2Name), dest, List((src1R, src1C), (src2R, src2C)), netList)
+                      match {case (list, str) => {netList = list; funcBody = funcBody + str}}
+                  case _ => warning("Trying to cross types with no associated Verilog module")
                 }
               }
               case "T" => {
