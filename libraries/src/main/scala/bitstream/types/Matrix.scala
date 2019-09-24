@@ -180,10 +180,37 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
     result(0, 0)
   }
 
-  def cross(that: Matrix[A]): A = {
+  def cross(that: Matrix[A]): Matrix[A] = {
     var result = Matrix[A](_numRows, _numCols)
     (_numRows, _numCols, that.rows, that.cols) match {
-      case (1, x, 1, y) || (x, 1, 1, y) || (x, 1, y, 1) || (1, x, y, 1) => {
+      case (1, x, 1, y) => {
+        if (x != y)
+          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
+        else {
+          result(0) = this(1) * that(2) - this(2) * that(1)
+          result(1) = this(0) * that(2) - this(2) * that(0)
+          result(2) = this(0) * that(1) - this(1) * that(0)
+        }
+      }
+      case (x, 1, 1, y) => {
+        if (x != y)
+          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
+        else {
+          result(0) = this(1) * that(2) - this(2) * that(1)
+          result(1) = this(0) * that(2) - this(2) * that(0)
+          result(2) = this(0) * that(1) - this(1) * that(0)
+        }
+      }
+      case (x, 1, y, 1) => {
+        if (x != y)
+          throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
+        else {
+          result(0) = this(1) * that(2) - this(2) * that(1)
+          result(1) = this(0) * that(2) - this(2) * that(0)
+          result(2) = this(0) * that(1) - this(1) * that(0)
+        }
+      }
+      case (1, x, y, 1) => {
         if (x != y)
           throw new IllegalArgumentException("Cannot take cross product of vectors with mismatched length")
         else {
