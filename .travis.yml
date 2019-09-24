@@ -3,8 +3,6 @@ dist: trusty
 language: scala
 scala:
 - 2.12.6
-script:
-- sbt ++$TRAVIS_SCALA_VERSION test
 jdk:
 - oraclejdk8
 before_install:
@@ -17,6 +15,17 @@ env:
   - secure: JQvdwuvh5NTDITaHc3Lge3/haymxrM+op3T1Og0rJh9gviKuLeM8Lxzmlu6lbIq2kv2zAbU7dxcfbfCGWAAvakgJfmIThZslmpH8RC1f6Ztc7drP0/B/DA8KG/bsBZXBNWdfrZQl3z2ajC8E5fr8q6nAOAh8NjBsE9rn38XbFGIbIsWXlUTfJtuWIhI11SCRyb49/umTDTtKRueHMUiBGxlG99iPfDbIL3QirNixNp9RbPdIurH8wpIrXOghPerXE9NM+Rt9Bh28UzAUT4NsWnhAuGsKXdIXaOXdenjpXxFQ0d+o5sFRxzZmiBxs/WjFOMgY1/b7mU10g6kCj6op2xnr+rtegR+MICW56szH/W1LR05SaMiMBJlTe3RVDl+oR1REejrU60Y4OvkCT600EqaDEcBS3bLG3x3ILN+PO2pLbAPo2adEgdPfWYhM+9//wDJE3HsH2hR68Sj6zTmLUsKGNu46O+f82O2Y2MH/b/6t0yuTMMur4jn2+zpWYh6Hrq4jnJJ/o1vBErCTYGISntw55GJV0wpFBgabex4A72wWYLQrdocMu7txpIspUeLr4RETybYglgF0eb/tWOxb8e7AGBjpg6jqp+x6eL5rVF9wmTKgseMLFixgeUQqdtIN1YMyHaDemMvsO5gBavM/mUCk86NzNP5EU3Fq581I4+M=
   - secure: Q3O5utpOnj6j0THGKBvzsuKY2PWIhwQ7Q/h+bHho5MN36Hvzx+KMMDHBzTY1bARhdqpa6PNa3KhF8xafq610Pld6BNFrlQYiMkwmZkC3JNZOxdxdQalHIBqABTS4U0YHP+rcnJBM6pQT9g8lmwJU9qBUgw0KiA9+VOgMhNffrJ3Uy6uiZvNWauOG0tPdyJBO6GDGhRv3i1KHOle8XmowfE5FtGkkJPhm00Uay7qks4EvvDCGUcTHtt/KExBBYE2p7zPW3fKeT5gwdpF46WaogwZsH1PLrdQvW7GWhHXUCMuiloG/WUyaYFbUthd9GOqvPKBkpteHp+SHSEbHLxVaGKO1Q72FvBUxLJH4fEHVaf85YEyNx3L8OeJd5ZwXwrj0fZsXlTcNeTS+xULJpsXy0eMsyHbrBF8DsQigmUdtytQxWpFO4O+QKYS+ilbS6ux2O5WSgaB07wQ4/cjNrY8QShjQzdtUkIfEx05k53dLEsni2FAiY1UuhD1wwGHaKbLJxzNeR/R6+tzayka9XzF1M1VhVjk8QuhkrAvsj15l0YEkNsYt6WqWGsleErsFpBSM6VixP3WZobVGfYyaX+ph255abBGWYxPlU7EKjntn2tvSj+5R3qFDKRgygBYDLwM0uCfbeaif5JdN9XVOzuh3hkuwst8+4NVbmn2jOtdU2AM=
   - secure: n7KJfpbqFsIY06zCi40Ck76F2GGi+xIQASG9pzXfcPQoJAAB/QBdMnET4G82ww0zWwiqJvf2O+6CxPtZszU6TfBxlT2InK7tzjgHPOYjEsgAdomT63f8LSvMUBBhcF0xefJepDarPlxlGtdPy0mSCXYLKwgtmGl76IFQZ8HS0R74hn8zUj06eomcRTbPnWoEsq/unhhNwgiLMQJgsTkxqrTIklbTI0oNiDqfJmCsF3e54n+0rHSIkJpVC+e6Wa3zX4MZMm7MjGEZxH0WMZ+zeAEKus0fRUdcT+YWJDgmtrxhgbEbxXp+HxdHWbUu07TbW0NbGK4gDqc0KMD9kO27p4bgotYAnzq8vmgEI6nZNgOQH55reSYArdHsTXjpfALKafSoDM6Fr+SKbwP7PZwVnDONjUf9HNA1llMQ5cK7qy1OIJNLd0/dDI+zA6ZY9VdCaAgEbAEEaVVwHn5zQ7xAkF6vDhGQHJOrcenyPrSBHf8K5RKrKxdXbpEE0A24rBxwZmh1QbphhShiHtkjlSTR9YqqVjVvNI/ien4vzHJfNBSEOBc99fKhd8y15s0baVuS6VR+SYQ7bLZKcvuCjs48MHY4vRtFQwJokFr4cCwP8KO261GScUGnhPfFMMJzCT302bMP1d/KXVyCqoajrPyKcrzRXScEqbNrB7vXBOXlU9U=
-after_success:
-- if [ $TRAVIS_PULL_REQUEST = 'false' ]; then sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
-  fi
+jobs:
+  include:
+    - stage: test
+      name: "Test"
+      script:
+      - sbt ++$TRAVIS_SCALA_VERSION test
+    - stage: publish
+      script:
+      - if [ $TRAVIS_PULL_REQUEST = 'false' ]; then sbt ++$TRAVIS_SCALA_VERSION releaseEarly;
+        fi
+stages:
+  - test
+  - name: publish
+    if: branch = master
