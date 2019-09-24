@@ -24,13 +24,13 @@ BitSAD is a domain-specific language for bitstream computing delivered in two pa
 
 The library can be installed by adding the following line to your `build.sbt`:
 ```scala
-libraryDependencies += "com.github.uw-pharm" % "bitsad-libraries_2.12" % "0.5.0",
+libraryDependencies += "com.github.uw-pharm" % "bitsad-libraries_2.12" % "0.5.2",
 ```
 
 To install the plugin, first add the library. Then, add the following to your `build.sbt`:
 ```scala
-libraryDependencies += "com.github.uw-pharm" % "bitsad-plugin_2.12" % "v0.5.0",
-libraryDependencies += compilerPlugin("com.github.uw-pharm" % "bitsad-plugin_2.12" % "v0.5.0"),
+libraryDependencies += "com.github.uw-pharm" % "bitsad-plugin_2.12" % "v0.5.2",
+libraryDependencies += compilerPlugin("com.github.uw-pharm" % "bitsad-plugin_2.12" % "v0.5.2"),
 scalacOptions += s"-Xplugin:bitsad-plugin_2.12.jar:bitsad-libraries_2.12.jar",
 scalacOptions += s"-P:bitsad-plugin:top:<your top level file>.scala"
 ```
