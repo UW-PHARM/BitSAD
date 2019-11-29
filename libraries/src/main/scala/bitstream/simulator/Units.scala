@@ -2,6 +2,7 @@ package bitstream.simulator.units
 
 import reflect._
 import Array._
+import scala.collection.mutable.ArrayBuffer
 import bitstream.types._
 import math._
 import scala.util.Random
@@ -23,6 +24,50 @@ import scala.util.Random
 //   }
 
 // }
+
+case class Recorder (val windowLen: Int, val rows: Int = 1, val cols: Int = 1) {
+
+  private var buffer = new ArrayBuffer[Tuple2[Matrix[Int], Matrix[Int]]](windowLen)
+  private var index = 0
+
+  // initiliaze the buffer
+  this.clear()
+
+  def record(x: Tuple2[Int, Int]): Unit = {
+    require(rows == 1 && cols == 1,
+      s"Recorder has size $rows by $cols but you recorded a single bit")
+    buffer(index % windowLen) = (Matrix(Array(Array(x._1))), Matrix(Array(Array(x._2))))
+    index += 1
+  }
+
+  def record(x: Tuple2[Matrix[Int], Matrix[Int]])(implicit dnc: DummyImplicit): Unit = {
+    require(rows == x._1.rows && cols == x._1.cols,
+      s"Recorder has size $rows by $cols but you recorded a matrix of size ${x._1.rows} by ${x._1.cols}")
+    buffer(index % windowLen) = x
+    index += 1
+  }
+
+  def clear(): Unit = {
+    var empty = (Matrix.zeros[Int](rows, cols), Matrix.zeros[Int](rows, cols))
+    buffer = ArrayBuffer.fill(windowLen)(empty)
+  }
+
+  def estimate: Matrix[Double] = {
+    var result = Matrix.zeros[Double](rows, cols)
+
+    for (t <- 0 until windowLen) {
+      var bits = buffer(t)
+      for (i <- 0 until rows; j <- 0 until cols) {
+        val pBit = bits._1(i, j)
+        val nBit = bits._2(i, j)
+        result(i, j) = result(i, j) + pBit - nBit
+      }
+    }
+
+    result / windowLen.toDouble
+  }
+
+}
 
 case class Decorrelator(val _numRows: Int, val _numCols: Int,
                         val _stepVal: Int = 16, val _rngRange: Int = 255) {

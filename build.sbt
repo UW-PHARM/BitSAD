@@ -4,9 +4,11 @@ cancelable in Global := true
 lazy val commonSettings = Seq(
   organization := "com.github.uw-pharm",
   scalaVersion := "2.12.6",
-  version := "0.5.2",
+  version := "0.6.0-SNAPSHOT",
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test,
-  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
+  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+  resolvers += Resolver.sonatypeRepo("releases"),
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 )
 
 lazy val root = (project in file("."))

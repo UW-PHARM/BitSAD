@@ -7,51 +7,61 @@ import Array._
 import reflect._
 import scala.reflect.runtime.universe._
 import scala.util.Random
-import bitstream.simulator.Operators._
+import bitstream.simulator.internal.units._
 
-trait MatrixSpecificType[A] {
-  def div: Function2[A, A, A]
-  def sqrt: Function1[A, A]
-  def sqrtDouble: Function1[A, Double]
-  def sqrtBS: Function1[A, Bitstream]
-  def rand: Function0[A]
-}
+// trait MatrixSpecificType[A] {
+//   def id: Function1[A, Int]
+//   def setId: Function2[A, Int, Unit]
+//   def div: Function2[A, A, A]
+//   def sqrt: Function1[A, A]
+//   def sqrtDouble: Function1[A, Double]
+//   def sqrtBS: Function1[A, Bitstream]
+//   def rand: Function0[A]
+// }
 
-object MatrixSpecificType {
-  implicit object MatrixInt extends MatrixSpecificType[Int] {
-    def div = _/_
-    def sqrt = math.sqrt(_).toInt
-    def sqrtDouble = math.sqrt(_)
-    def sqrtBS = (n: Int) => SBitstream(math.sqrt(n))
-    def rand = () => math.random().toInt
-  }
+// object MatrixSpecificType {
+//   implicit object MatrixInt extends MatrixSpecificType[Int] {
+//     def id = (x: Int) => 0
+//     def setId = (x: Int, id: Int) => {}
+//     def div = _/_
+//     def sqrt = math.sqrt(_).toInt
+//     def sqrtDouble = math.sqrt(_)
+//     def sqrtBS = (n: Int) => SBitstream(math.sqrt(n))
+//     def rand = () => math.random().toInt
+//   }
 
-  implicit object MatrixLong extends MatrixSpecificType[Long] {
-    def div = _/_
-    def sqrt = math.sqrt(_).toLong
-    def sqrtDouble = math.sqrt(_)
-    def sqrtBS = (n: Long) => SBitstream(math.sqrt(n))
-    def rand = () => math.random().toLong
-  }
+//   implicit object MatrixLong extends MatrixSpecificType[Long] {
+//     def id = (x: Long) => 0
+//     def setId = (x: Long, id: Int) => {}
+//     def div = _/_
+//     def sqrt = math.sqrt(_).toLong
+//     def sqrtDouble = math.sqrt(_)
+//     def sqrtBS = (n: Long) => SBitstream(math.sqrt(n))
+//     def rand = () => math.random().toLong
+//   }
 
-  implicit object MatrixDouble extends MatrixSpecificType[Double] {
-    def div = _/_
-    def sqrt = math.sqrt
-    def sqrtDouble = math.sqrt
-    def sqrtBS = (n: Double) => SBitstream(math.sqrt(n))
-    def rand = math.random
-  }
+//   implicit object MatrixDouble extends MatrixSpecificType[Double] {
+//     def id = (x: Double) => 0
+//     def setId = (x: Double, id: Int) => {}
+//     def div = _/_
+//     def sqrt = math.sqrt
+//     def sqrtDouble = math.sqrt
+//     def sqrtBS = (n: Double) => SBitstream(math.sqrt(n))
+//     def rand = math.random
+//   }
 
-  implicit object MatrixBitstream extends MatrixSpecificType[SBitstream] {
-    def div = _/_
-    def sqrt = SBitstream.sqrt
-    def sqrtDouble = SBitstream.sqrt(_).value
-    def sqrtBS = SBitstream.sqrt
-    def rand = () => SBitstream(math.random())
-  }
-}
+//   implicit object MatrixBitstream extends MatrixSpecificType[SBitstream] {
+//     def id = _.id
+//     def setId = (x: SBitstream, id: Int) => x.id = id
+//     def div = _/_
+//     def sqrt = SBitstream.sqrt
+//     def sqrtDouble = SBitstream.sqrt(_).value
+//     def sqrtBS = SBitstream.sqrt
+//     def rand = () => SBitstream(math.random())
+//   }
+// }
 
-case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num: Numeric[A]) {
+case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num: SimulatableNumeric[A]) {
 
   private var _array = Array.ofDim[A](_numRows, _numCols)
 
@@ -76,22 +86,33 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
     case _ => throw new IllegalArgumentException("Cannot assign row of matrix to single value")
   }
 
-  private def scalarOp(f: A => A): Matrix[A] = {
+  private def scalarOp(f: A => (String, String) => A)
+                      (xName: String, yName: String): Matrix[A] = {
     val result = Matrix[A](_numRows, _numCols)
     for (i <- 0 until _numRows; j <- 0 until _numCols) {
-      result(i, j) = f(this(i, j))
+      result(i, j) = f(this(i, j))(s"$xName($i, $j)", s"$yName($i, $j)")
     }
 
     result
   }
 
-  private def opByEntry(f: (A, A) => A)(that: Matrix[A]): Matrix[A] = {
+  private def scalarOp(f: A => SimulationId => A)(id: SimulationId): Matrix[A] = {
+    val result = Matrix[A](_numRows, _numCols)
+    for (i <- 0 until _numRows; j <- 0 until _numCols) {
+      result(i, j) = f(this(i, j))(SimulationId(s"${id.lhs}($i, $j)", id.rhs))
+    }
+
+    result
+  }
+
+  private def opByEntry(f: (A, A) => (String, String) => A)(that: Matrix[A])
+                       (xName: String, yName: String): Matrix[A] = {
     require(_numRows == that.rows && _numCols == that.cols,
       "Cannot operate element-wise on matrices of unequal sizes")
 
     val result = Matrix[A](_numRows, _numCols)
     for (i <- 0 until _numRows; j <- 0 until _numCols) {
-      result(i, j) = f(this(i, j), that(i, j))
+      result(i, j) = f(this(i, j), that(i, j))(s"$xName($i, $j)", s"$yName($i, $j)")
     }
 
     result
@@ -117,6 +138,8 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
     result
   }
 
+  def toArray: Array[Array[A]] = _array
+
   def T: Matrix[A] = {
     val result = Matrix[A](_numCols, _numRows)
     for (i <- 0 until _numCols; j <- 0 until _numRows) {
@@ -139,32 +162,47 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
   }
   def !=(that: Matrix[A]): Boolean = !(this == that)
 
-  def +(that: A): Matrix[A] = scalarOp(num.plus(_, that))
-  def -(that: A): Matrix[A] = scalarOp(num.minus(_, that))
-  def *(that: A): Matrix[A] = scalarOp(num.times(_, that))
-  def /(that: A)(implicit numMatrix: MatrixSpecificType[A]): Matrix[A]
-  	= scalarOp(numMatrix.div(_, that))
+  def +(that: A)(implicit id: SimulationId): Matrix[A]
+    = scalarOp((x: A) => (y: String, z: String) => num.plus(x, that)(y, z))(id.lhs, id.rhs)
+  def -(that: A)(implicit id: SimulationId): Matrix[A]
+    = scalarOp((x: A) => (y: String, z: String) => num.minus(x, that)(y, z))(id.lhs, id.rhs)
+  def *(that: A)(implicit id: SimulationId): Matrix[A]
+    = scalarOp((x: A) => (y: String, z: String) => num.times(x, that)(y, z))(id.lhs, id.rhs)
+  def /(that: A)(implicit id: SimulationId): Matrix[A]
+    = scalarOp((x: A) => (y: String, z: String) => num.div(x, that)(y, z))(id.lhs, id.rhs)
 
-  def +(that: Matrix[A]): Matrix[A] = this.opByEntry(num.plus)(that)
-  def -(that: Matrix[A]): Matrix[A] = this.opByEntry(num.minus)(that)
-  def **(that: Matrix[A]): Matrix[A] = this.opByEntry(num.times)(that)
-  def /(that: Matrix[A])(implicit numMatrix: MatrixSpecificType[A]): Matrix[A]
-    = this.opByEntry(numMatrix.div)(that)
+  def +(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+    = this.opByEntry(num.plus _)(that)(id.lhs, id.rhs)
+  def -(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+    = this.opByEntry(num.minus _)(that)(id.lhs, id.rhs)
+  def **(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+    = this.opByEntry(num.times _)(that)(id.lhs, id.rhs)
+  def /(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+    = this.opByEntry(num.div _)(that)(id.lhs, id.rhs)
 
-  def *(that: Matrix[A]): Matrix[A] = {
+  def *(that: Matrix[A])(implicit id: SimulationId): Matrix[A] = {
     require(_numCols == that.rows, "Cannot multiply matrices of mismatched inner dimension")
 
-    val result = Matrix[A](_numRows, that.cols)
-    for (i <- 0 until _numRows; j <- 0 until that.cols) {
-      var accum = num.zero
-      for (k <- 0 until _numCols) {
-        val prod = num.times(this(i, k), that(k, j))
-        accum = num.plus(accum, prod)
+    if (id.lhs == "" && id.rhs == "") {
+      val result = Matrix[A](_numRows, that.cols)
+      for (i <- 0 until _numRows; j <- 0 until that.cols) {
+        var accum = num.zero
+        for (k <- 0 until _numCols) {
+          val prod = num.times(this(i, k), that(k, j))(id.lhs, id.rhs)
+          accum = num.plus(accum, prod)
+        }
+        result(i, j) = accum
       }
-      result(i, j) = accum
-    }
 
-    result
+      result
+    } else {
+      var result = (this * that)(SimulationId("", "")).toSBitstream
+      var op = Matrix.findOperator(id.lhs, id.rhs, "times", result.rows, result.cols)
+      result.push(op.evaluate(List(this.asInstanceOf[Matrix[SBitstream]].pop,
+                                   that.asInstanceOf[Matrix[SBitstream]].pop)))
+
+      result.asInstanceOf[Matrix[A]]
+    }
   }
 
   def dot(that: Matrix[A]): A = {
@@ -240,7 +278,72 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
 
 object Matrix {
 
-  def apply[A: ClassTag](array: Array[Array[A]])(implicit num: Numeric[A]): Matrix[A] = {
+  private var opMap: Map[Tuple3[String, String, String], MatrixOperator] = Map()
+
+  def findOperator(xId: String, yId: String, op: String, rows: Int, cols: Int): MatrixOperator = {
+    if (opMap contains (xId, yId, op)) opMap((xId, yId, op))
+    else op match {
+      case "times" => {
+        var multiplier = new SCSignedMatrixMultiplier(rows, cols)
+        opMap += ((xId, yId, "times") -> multiplier)
+        opMap((xId, yId, op))
+      }
+      case "norm" => {
+        var normer = new SCL2Norm(rows)
+        opMap += ((xId, yId, "norm") -> normer)
+        opMap((xId, yId, op))
+      }
+    }
+  }
+
+  // private def mkIdResult[A: TypeTag](result: Matrix[A], op: String, xId: Int, yId: Int)
+  //                                   (implicit numMatrix: MatrixSpecificType[A]):
+  //     Matrix[A] = {
+  //   if (typeOf[A] =:= typeOf[SBitstream]) {
+  //     var (_, id) = Matrix.findOperator(xId, yId, op, result.rows, result.cols)
+  //     result.id = id
+  //     if (Matrix.idMap contains id) {
+  //       val subIds = Matrix.idMap(id)
+  //       for (i <- 0 until result.rows; j <- 0 until result.cols) {
+  //         numMatrix.setId(result(i, j), subIds(i)(j))
+  //       }
+  //     } else {
+  //       var subIds = Array.ofDim[Int](result.rows, result.cols)
+  //       for (i <- 0 until result.rows; j <- 0 until result.cols) {
+  //         subIds(i)(j) = numMatrix.id(result(i, j))
+  //       }
+  //       Matrix.idMap += (id -> subIds)
+  //     }
+
+  //     result
+  //   } else result
+  // }
+
+  // private def mkLScalarIdResult[A: TypeTag](result: Matrix[A], op: String,
+  //                                            scalar: A, yId: Int)
+  //                                           (implicit num: Numeric[A],
+  //                                            numMatrix: MatrixSpecificType[A]):
+  //     Matrix[A] = {
+  //   var xId =
+  //     if (typeOf[A] =:= typeOf[SBitstream]) numMatrix.id(scalar)
+  //     else math.round(scalar.toDouble).toInt
+
+  //   mkIdResult(result, op, xId, yId)
+  // }
+
+  // private def mkRScalarIdResult[A: TypeTag](result: Matrix[A], op: String,
+  //                                            xId: Int, scalar: A)
+  //                                           (implicit num: Numeric[A],
+  //                                            numMatrix: MatrixSpecificType[A]):
+  //     Matrix[A] = {
+  //   var yId =
+  //     if (typeOf[A] =:= typeOf[SBitstream]) numMatrix.id(scalar)
+  //     else math.round(scalar.toDouble).toInt
+
+  //   mkIdResult(result, op, xId, yId)
+  // }
+
+  def apply[A: ClassTag](array: Array[Array[A]])(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     val rows = array.length
     val cols = array(0).length
     require(array.forall(_.length == cols), "Rows of array must be same length")
@@ -252,7 +355,7 @@ object Matrix {
     result
   }
 
-  def zeros[A: ClassTag](rows: Int, cols: Int)(implicit num: Numeric[A]): Matrix[A] = {
+  def zeros[A: ClassTag](rows: Int, cols: Int)(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     val result = Matrix[A](rows, cols)
 
     for (i <- 0 until rows; j <- 0 until cols) {
@@ -262,7 +365,7 @@ object Matrix {
     result
   }
 
-  def ones[A: ClassTag](rows: Int, cols: Int)(implicit num: Numeric[A]): Matrix[A] = {
+  def ones[A: ClassTag](rows: Int, cols: Int)(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     val result = Matrix[A](rows, cols)
 
     for (i <- 0 until rows; j <- 0 until cols) {
@@ -272,7 +375,7 @@ object Matrix {
     result
   }
 
-  def eye[A: ClassTag](rows: Int, cols: Int)(implicit num: Numeric[A]): Matrix[A] = {
+  def eye[A: ClassTag](rows: Int, cols: Int)(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     val result = Matrix[A](rows, cols)
 
     for (i <- 0 until rows; j <- 0 until cols) {
@@ -283,22 +386,21 @@ object Matrix {
     result
   }
 
-  def sqrt[A: ClassTag](m: Matrix[A])
-                       (implicit num: Numeric[A], numMatrix: MatrixSpecificType[A]): Matrix[A]
-    = m.scalarOp(numMatrix.sqrt)
+  def sqrt[A: ClassTag](m: Matrix[A])(implicit id: SimulationId,
+                                      num: SimulatableNumeric[A]): Matrix[A]
+    = m.scalarOp((x: A) => (y: String, z: String) => num.sqrt(x)(y, z))(id.lhs, id.rhs)
 
   def norm[A: TypeTag](m: Matrix[A], normType: String = "L2")
-                      (implicit num: Numeric[A], numMatrix: MatrixSpecificType[A]): Double = {
-
+                      (implicit num: SimulatableNumeric[A]): Double = {
     val l1Body = (x: A, y: A) => {
       val yAbs = num.abs(y)
 
-      num.plus(x, yAbs)
+      num.plus(x, yAbs)("", "")
     }
     val l2Body = (x: A, y: A) => {
-      val ySq = num.times(y, y)
+      val ySq = num.times(y, y)("", "")
 
-      num.plus(x, ySq)
+      num.plus(x, ySq)("", "")
     }
 
     normType match {
@@ -309,7 +411,7 @@ object Matrix {
       }
       case "L2" => (m.rows, m.cols) match {
         case (_, 1) | (1, _) =>
-          numMatrix.sqrtDouble(
+          num.sqrtDouble(
           	m._array.map(_.foldLeft(num.zero)(l2Body)).foldLeft(num.zero)(num.plus))
         case _ => throw new NotImplementedError("No support for L2 norm of a Matrix")
       }
@@ -322,7 +424,7 @@ object Matrix {
         case t if t =:= typeOf[SBitstream] =>
           throw new NotImplementedError("No support for fro norm of Bitstream")
         case _ =>
-          numMatrix.sqrtDouble(
+          num.sqrtDouble(
           	m._array.map(_.foldLeft(num.zero)(l2Body)).foldLeft(num.zero)(num.plus))
       }
       case _ =>
@@ -330,30 +432,34 @@ object Matrix {
     }
   }
 
-  def norm(m: Matrix[SBitstream]): SBitstream = {
-    val l2Body = (x: SBitstream, y: SBitstream) => x + (y * y)
-
+  def norm(m: Matrix[SBitstream])(implicit id: SimulationId):
+      SBitstream = {
     (m.rows, m.cols) match {
-      case (_, 1) | (1, _) =>
-        SBitstream.sqrt(
-          m._array.map(_.foldLeft(SBitstream(0))(l2Body)).foldLeft(SBitstream(0))(_+_))
+      case (_, 1) => {
+        var result = SBitstream(norm(m.toDouble))
+        var op = findOperator(id.lhs, id.rhs, "norm", m.rows, m.cols)
+        val bit = op.evaluate(List(m.pop))
+        result.push((bit._1(0, 0), bit._2(0, 0)))
+        result
+      }
+      case (1, _) =>
+        throw new IllegalArgumentException("L2 norm of Matrix[SBitstream] requires column vector")
       case _ => throw new NotImplementedError("No support for L2 norm of a Matrix")
     }
   }
 
-  def rand[A: ClassTag](rows: Int, cols: Int)
-                       (implicit num: Numeric[A], numMatrix: MatrixSpecificType[A]): Matrix[A] = {
-
+  def rand[A: ClassTag](rows: Int, cols: Int)(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     val result = Matrix[A](rows, cols)
 
     for (i <- 0 until rows; j <- 0 until cols) {
-      result(i, j) = numMatrix.rand()
+      result(i, j) = num.rand()
     }
 
     result
   }
 
-  def conv2d[A: ClassTag](m: Matrix[A], k: Matrix[A])(implicit num: Numeric[A]): Matrix[A] = {
+  def conv2d[A: ClassTag](m: Matrix[A], k: Matrix[A])(implicit num: SimulatableNumeric[A]):
+      Matrix[A] = {
     var result = Matrix[A](m.rows, m.cols)
 
     for (i <- 0 until m.rows; j <- 0 until m.cols) {
@@ -369,9 +475,8 @@ object Matrix {
     result
   }
 
-  def reshape[A: ClassTag](m: Matrix[A], rows: Int, cols: Int)(implicit num: Numeric[A]):
+  def reshape[A: ClassTag](m: Matrix[A], rows: Int, cols: Int)(implicit num: SimulatableNumeric[A]):
       Matrix[A] = {
-
     var result = Matrix[A](rows, cols)
 
     var ii = 0
@@ -387,7 +492,7 @@ object Matrix {
     result
   }
 
-  def horzConcat[A: ClassTag](m: Matrix[A], n: Matrix[A])(implicit num: Numeric[A]): Matrix[A] = {
+  def horzConcat[A: ClassTag](m: Matrix[A], n: Matrix[A])(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     require(m.rows == n.rows, "Can't horizontally concatenate matrices with different # of rows")
     var result = Matrix[A](m.rows, m.cols + n.cols)
 
@@ -404,7 +509,7 @@ object Matrix {
     result
   }
 
-  def vertConcat[A: ClassTag](m: Matrix[A], n: Matrix[A])(implicit num: Numeric[A]): Matrix[A] = {
+  def vertConcat[A: ClassTag](m: Matrix[A], n: Matrix[A])(implicit num: SimulatableNumeric[A]): Matrix[A] = {
     require(m.cols == n.cols, "Can't vertically concatenate matrices with different # of columns")
     var result = Matrix[A](m.rows + n.cols, m.cols)
 
@@ -421,9 +526,8 @@ object Matrix {
     result
   }
 
-  def tile[A: ClassTag](m: Matrix[A], numTiles: Tuple2[Int, Int])(implicit num: Numeric[A]):
+  def tile[A: ClassTag](m: Matrix[A], numTiles: Tuple2[Int, Int])(implicit num: SimulatableNumeric[A]):
       Array[Array[Matrix[A]]] = {
-
     val xTileSize = math.ceil(m.rows.toDouble / numTiles._1.toDouble).toInt
     val yTileSize = math.ceil(m.cols.toDouble / numTiles._2.toDouble).toInt
 
@@ -440,70 +544,104 @@ object Matrix {
     tiles
   }
 
-  implicit class MatrixOps[A](lhs: A)
-  							 (implicit num: Numeric[A], numMatrix: MatrixSpecificType[A]) {
-    def +(that: Matrix[A]): Matrix[A] = that.scalarOp(num.plus(lhs, _))
-    def -(that: Matrix[A]): Matrix[A] = that.scalarOp(num.minus(lhs, _))
-    def *(that: Matrix[A]): Matrix[A] = that.scalarOp(num.times(lhs, _))
-    def /(that: Matrix[A]): Matrix[A] = that.scalarOp(numMatrix.div(lhs, _))
+  implicit class MatrixOps[A](lhs: A)(implicit num: SimulatableNumeric[A]) {
+    def +(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+      = that.scalarOp((x: A) => (y: String, z: String) => num.plus(lhs, x)(y, z))(id.lhs, id.rhs)
+    def -(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+      = that.scalarOp((x: A) => (y: String, z: String) => num.minus(lhs, x)(y, z))(id.lhs, id.rhs)
+    def *(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+      = that.scalarOp((x: A) => (y: String, z: String) => num.times(lhs, x)(y, z))(id.lhs, id.rhs)
+    def /(that: Matrix[A])(implicit id: SimulationId): Matrix[A]
+      = that.scalarOp((x: A) => (y: String, z: String) => num.div(lhs, x)(y, z))(id.lhs, id.rhs)
   }
 
-  implicit class MatrixIntOps(lhs: Int) {
-    def +(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs.toDouble + _)
-    def -(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs.toDouble - _)
-    def *(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs.toDouble * _)
-    def /(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs.toDouble / _)
+  implicit class MatrixIntOps(lhs: Int)(implicit num: SimulatableNumeric[Double]) {
+    def +(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.plus(lhs.toDouble, x)(y, z))(id.lhs, id.rhs)
+    def -(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.minus(lhs.toDouble, x)(y, z))(id.lhs, id.rhs)
+    def *(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.times(lhs.toDouble, x)(y, z))(id.lhs, id.rhs)
+    def /(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.div(lhs.toDouble, x)(y, z))(id.lhs, id.rhs)
   }
 
-  implicit class MatrixDoubleOps(lhs: Double) {
-    def +(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs + _)
-    def -(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs - _)
-    def *(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs * _)
-    def /(that: Matrix[Double]): Matrix[Double] = that.scalarOp(lhs / _)
+  implicit class MatrixDoubleOps(lhs: Double)(implicit num: SimulatableNumeric[Double]) {
+    def +(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.plus(lhs, x)(y, z))(id.lhs, id.rhs)
+    def -(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.minus(lhs, x)(y, z))(id.lhs, id.rhs)
+    def *(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.times(lhs, x)(y, z))(id.lhs, id.rhs)
+    def /(that: Matrix[Double])(implicit id: SimulationId): Matrix[Double]
+      = that.scalarOp((x: Double) => (y: String, z: String) => num.div(lhs, x)(y, z))(id.lhs, id.rhs)
   }
 
-  implicit class MatrixIntSBitstreamOps(lhs: Int) {
-    def +(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs + _)
-    def -(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs - _)
-    def *(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs * _)
-    def /(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs / _)
+  implicit class MatrixIntSBitstreamOps(lhs: Int)(implicit num: SimulatableNumeric[SBitstream]) {
+    def +(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.plus(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
+    def -(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.minus(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
+    def *(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.times(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
+    def /(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.div(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
   }
 
-  implicit class MatrixDoubleSBitstreamIntOps(lhs: Double) {
-    def +(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs + _)
-    def -(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs - _)
-    def *(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs * _)
-    def /(that: Matrix[SBitstream]): Matrix[SBitstream] = that.scalarOp(lhs / _)
+  implicit class MatrixDoubleSBitstreamIntOps(lhs: Double)(implicit num: SimulatableNumeric[SBitstream]) {
+    def +(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.plus(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
+    def -(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.minus(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
+    def *(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.times(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
+    def /(that: Matrix[SBitstream])(implicit id: SimulationId): Matrix[SBitstream]
+      = that.scalarOp((x: SBitstream) => (y: String, z: String) => num.div(SBitstream(lhs), x)(y, z))(id.lhs, id.rhs)
   }
 
   implicit class MatrixFixedGainDiv(lhs: Matrix[SBitstream]) {
-    def :/(that: Int): Matrix[SBitstream] = lhs.scalarOp(_ :/ that)
-    def :/(that: Long): Matrix[SBitstream] = lhs.scalarOp(_ :/ that)
-    def :/(that: Double): Matrix[SBitstream] = lhs.scalarOp(_ :/ that)
+    def :/(that: Int)(implicit id: SimulationId): Matrix[SBitstream]
+      = lhs.scalarOp((x: SBitstream) => (y: SimulationId) => (x :/ that)(y))(id)
+    def :/(that: Long)(implicit id: SimulationId): Matrix[SBitstream]
+      = lhs.scalarOp((x: SBitstream) => (y: SimulationId) => (x :/ that)(y))(id)
+    def :/(that: Double)(implicit id: SimulationId): Matrix[SBitstream]
+      = lhs.scalarOp((x: SBitstream) => (y: SimulationId) => (x :/ that)(y))(id)
   }
 
-  // implicit class MatrixSBitstreamOps(lhs: Matrix[SBitstream]) {
-  //   def pop: (Matrix[Int], Matrix[Int]) = {
-  //     var resultP = Matrix.zeros[Int](lhs.rows, lhs.cols)
-  //     var resultN = Matrix.zeros[Int](lhs.rows, lhs.cols)
+  implicit class MatrixSBitstreamBitLevelOps(lhs: Matrix[SBitstream]) {
+    def push(bits: Tuple2[Matrix[Int], Matrix[Int]]): Unit = {
+      for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
+        val pBit = bits._1(i, j)
+        val nBit = bits._2(i, j)
+        lhs(i, j).push((pBit, nBit))
+      }
+    }
 
-  //     for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
-  //       lhs(i, j).pop match {
-  //         case (pos, neg) => {
-  //           resultP(i, j) = pos
-  //           resultN(i, j) = neg
-  //         }
-  //       }
-  //     }
+    def pop: Tuple2[Matrix[Int], Matrix[Int]] = {
+      var pResult = Matrix.zeros[Int](lhs.rows, lhs.cols)
+      var nResult = Matrix.zeros[Int](lhs.rows, lhs.cols)
 
-  //     (resultP, resultN)
-  //   }
+      for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
+        val bit = lhs(i, j).pop
+        pResult(i, j) = bit._1
+        nResult(i, j) = bit._2
+      }
 
-  //   def push(x: Tuple2[Matrix[Int], Matrix[Int]]): Unit = {
-  //     for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
-  //       lhs(i, j).push((x._1(i, j), x._2(i, j)))
-  //     }
-  //   }
-  // }
+      (pResult, nResult)
+    }
+
+    def observe: Tuple2[Matrix[Int], Matrix[Int]] = {
+      var pResult = Matrix.zeros[Int](lhs.rows, lhs.cols)
+      var nResult = Matrix.zeros[Int](lhs.rows, lhs.cols)
+
+      for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
+        val bit = lhs(i, j).observe
+        pResult(i, j) = bit._1
+        nResult(i, j) = bit._2
+      }
+
+      (pResult, nResult)
+    }
+  }
 
 }

@@ -7,7 +7,7 @@ import Array._
 import reflect._
 import scala.reflect.runtime.universe._
 import scala.util.Random
-import bitstream.simulator.Operators._
+import bitstream.simulator.internal.units._
 import scala.io.Source
 import java.io.{File, FileWriter, BufferedWriter}
 
@@ -87,22 +87,12 @@ trait Bitstream {
 }
 
 case class SBitstream(private var _value: Double,
-                      val windowLen: Int = 1000, val numPops: Int = 1,
                       val signedness: SBitstream.Signedness.Signedness =
                         SBitstream.Signedness.Unipolar)
   extends Bitstream {
 
-  // type Bit = Tuple2[Int, Int]
-
-  // private val _id = SBitstream.idGenerator.nextInt()
-  // private var rng = Random
-
-  // private val arrLen = math.ceil(windowLen / 32).toInt
-  // private var buffer = new Array[Tuple2[Int, Int]](arrLen)
-  // private var produceIndex = 0
-  // private var consumeIndex = 0
-
-  // for (i <- 0 until arrLen) buffer(i) = (0, 0)
+  private var rng = Random
+  private var _bit: Tuple2[Int, Int] = (-1, -1)
 
   _value = if (_value > 1) 1.0 else _value
   _value = if (_value < -1) -1.0 else _value
@@ -122,10 +112,7 @@ case class SBitstream(private var _value: Double,
     case _ => throw new IllegalArgumentException("Unrecognized signedness of SBitstream")
   }
 
-  // def id: Int = _id
-
   def value: Double = _value
-
   def value_=(value: Double) = {
     require(value >= -1 && value <= 1, "Bitstream value must be in [-1, 1]")
     _value = value
@@ -147,44 +134,44 @@ case class SBitstream(private var _value: Double,
     }
   }
 
-  // private def genBit: (Int, Int) = {
-  //   var pBit = 0
-  //   var nBit = 0
+  private def genBit: (Int, Int) = {
+    var pBit = 0
+    var nBit = 0
 
-  //   signedness match {
-  //     case SBitstream.Signedness.Unipolar => {
-  //       pBit = if (rng.nextDouble() <= positiveValue) 1 else 0
-  //       nBit = if (rng.nextDouble() <= negativeValue) 1 else 0
-  //     }
-  //     case SBitstream.Signedness.Bipolar =>
-  //     throw new NotImplementedError("No support for bipolar signedness of bitstreams")
-  //     case SBitstream.Signedness.SignedMagnitude =>
-  //       throw new NotImplementedError("No support for signed magnitude signedness of bitstreams")
-  //     case _ => throw new IllegalArgumentException("Unrecognized signedness of SBitstream")
-  //   }
+    signedness match {
+      case SBitstream.Signedness.Unipolar => {
+        pBit = if (rng.nextDouble() < positiveValue) 1 else 0
+        nBit = if (rng.nextDouble() < negativeValue) 1 else 0
+      }
+      case SBitstream.Signedness.Bipolar =>
+      throw new NotImplementedError("No support for bipolar signedness of bitstreams")
+      case SBitstream.Signedness.SignedMagnitude =>
+        throw new NotImplementedError("No support for signed magnitude signedness of bitstreams")
+      case _ => throw new IllegalArgumentException("Unrecognized signedness of SBitstream")
+    }
 
-  //   (pBit, nBit)
-  // }
+    (pBit, nBit)
+  }
 
-  // override def pop: (Int, Int) = {
-  //   if (produceIndex == consumeIndex) this.genBit
-  //   else {
-  //     val idx = consumeIndex % (32 * arrLen)
-  //     consumeIndex += 1
+  def pop: Tuple2[Int, Int] = {
+    if (_bit == (-1, -1)) this.genBit
+    else {
+      val out = _bit
+      _bit = (-1, -1)
+      out
+    }
+  }
 
-  //     val slice = buffer(idx / 32)
-  //     val p = (slice._1 >> (idx % 32)) & 1
-  //     val n = (slice._2 >> (idx % 32)) & 1
-  //     (p, n)
-  //   }
-  // }
-  // override def push(x: Tuple2[Int, Int]): Unit = {
-  //   val idx = produceIndex % (32 * arrLen)
-  //   produceIndex += 1
+  def push(x: Tuple2[Int, Int]): Unit = {
+    _bit = x
+  }
 
-  //   var slice = buffer(idx / 32)
-  //   buffer(idx / 32) = (slice._1 | (x._1 << (idx % 32)), slice._2 | (x._2 << (idx % 32)))
-  // }
+  def observe: Tuple2[Int, Int] = {
+    if (_bit == (-1, -1)) {
+      _bit = this.genBit
+      _bit
+    } else _bit
+  }
 
   // def getEstimate: Double = {
   //   println("Current buffer:")
@@ -225,39 +212,99 @@ case class SBitstream(private var _value: Double,
   def >=(that: Long): Boolean = if (this.value >= that) true else false
   def >=(that: Double): Boolean = if (this.value >= that) true else false
 
-  def +(that: SBitstream): SBitstream = SBitstream.SBitstreamIsFractional.plus(this, that)
-  def -(that: SBitstream): SBitstream = SBitstream.SBitstreamIsFractional.minus(this, that)
-  def *(that: SBitstream): SBitstream = SBitstream.SBitstreamIsFractional.times(this, that)
-  def /(that: SBitstream): SBitstream = SBitstream.SBitstreamIsFractional.div(this, that)
+  def +(that: SBitstream)(implicit id: SimulationId): SBitstream
+    = SimulatableNumeric.SBitstreamIsSimulatable.plus(this, that)(id.lhs, id.rhs)
+  def -(that: SBitstream)(implicit id: SimulationId): SBitstream
+    = SimulatableNumeric.SBitstreamIsSimulatable.minus(this, that)(id.lhs, id.rhs)
+  def *(that: SBitstream)(implicit id: SimulationId): SBitstream
+    = SimulatableNumeric.SBitstreamIsSimulatable.times(this, that)(id.lhs, id.rhs)
+  def /(that: SBitstream)(implicit id: SimulationId): SBitstream
+    = SimulatableNumeric.SBitstreamIsSimulatable.div(this, that)(id.lhs, id.rhs)
 
-  def +(that: Int): SBitstream = this + SBitstream(that.toDouble)
-  def +(that: Long): SBitstream = this + SBitstream(that.toDouble)
-  def +(that: Double): SBitstream = this + SBitstream(that.toDouble)
-  def -(that: Int): SBitstream = this - SBitstream(that.toDouble)
-  def -(that: Long): SBitstream = this - SBitstream(that.toDouble)
-  def -(that: Double): SBitstream = this - SBitstream(that.toDouble)
-  def *(that: Int): SBitstream = this * SBitstream(that.toDouble)
-  def *(that: Long): SBitstream = this * SBitstream(that.toDouble)
-  def *(that: Double): SBitstream = {
-    var x = SBitstream(that.toDouble)
-    println(s"${x.value}")
-    this * x
+  def +(that: Int)(implicit id: SimulationId): SBitstream
+    = (this + SBitstream(that.toDouble))(id)
+  def +(that: Long)(implicit id: SimulationId): SBitstream
+    = (this + SBitstream(that.toDouble))(id)
+  def +(that: Double)(implicit id: SimulationId): SBitstream
+    = (this + SBitstream(that.toDouble))(id)
+  def -(that: Int)(implicit id: SimulationId): SBitstream
+    = (this - SBitstream(that.toDouble))(id)
+  def -(that: Long)(implicit id: SimulationId): SBitstream
+    = (this - SBitstream(that.toDouble))(id)
+  def -(that: Double)(implicit id: SimulationId): SBitstream
+    = (this - SBitstream(that.toDouble))(id)
+  def *(that: Int)(implicit id: SimulationId): SBitstream
+    = (this * SBitstream(that.toDouble))(id)
+  def *(that: Long)(implicit id: SimulationId): SBitstream
+    = (this * SBitstream(that.toDouble))(id)
+  def *(that: Double)(implicit id: SimulationId): SBitstream
+    = (this * SBitstream(that.toDouble))(id)
+
+  def :/(that: Int)(implicit id: SimulationId): SBitstream = {
+    var out = SBitstream(this.value / that)
+    var op = SBitstream.findOperator(id.lhs, id.rhs, "fdiv")
+    out.push(op.evaluate(List(this.pop)))
+    out
+  }
+  def :/(that: Long)(implicit id: SimulationId): SBitstream = {
+    var out = SBitstream(this.value / that.toInt)
+    var op = SBitstream.findOperator(id.lhs, id.rhs, "fdiv")
+    out.push(op.evaluate(List(this.pop)))
+    out
+  }
+  def :/(that: Double)(implicit id: SimulationId): SBitstream = {
+    var out = SBitstream(this.value / math.round(that))
+    var op = SBitstream.findOperator(id.lhs, id.rhs, "fdiv")
+    out.push(op.evaluate(List(this.pop)))
+    out
   }
 
-  def :/(that: Int): SBitstream = SBitstream(this.value / that)
-  def :/(that: Long): SBitstream = SBitstream(this.value / that)
-  def :/(that: Double): SBitstream = SBitstream(this.value / that)
-
-  override def mkString: String = s"Bitstream[${_value}, $windowLen ticks, $numPops pops]"
+  override def mkString: String = s"Bitstream[${_value}]"
 
 }
 
 object SBitstream {
 
-  // private var idGenerator = Random
-  // private var opMap: Map[Tuple3[Int, Int, String], Tuple2[Operator, SBitstream]] = Map()
+  private var opMap: Map[Tuple3[String, String, String], Operator] = Map()
 
-  def sqrt(stream: SBitstream): SBitstream = SBitstream(math.sqrt(stream.value))
+  def findOperator(xId: String, yId: String, op: String): Operator = {
+    if (opMap contains (xId, yId, op)) opMap((xId, yId, op))
+    else op match {
+      case "plus" => {
+        var adder = new SCSignedAdder()
+        opMap += ((xId, yId, "plus") -> adder)
+        opMap((xId, yId, op))
+      }
+      case "minus" => {
+        var subtractor = new SCSignedSaturatingSubtractor()
+        opMap += ((xId, yId, "minus") -> subtractor)
+        opMap((xId, yId, op))
+      }
+      case "times" => {
+        var multiplier = new SCSignedMultiplier()
+        opMap += ((xId, yId, "times") -> multiplier)
+        opMap((xId, yId, op))
+      }
+      case "div" => {
+        var divider = new SCSignedDivider()
+        opMap += ((xId, yId, "div") -> divider)
+        opMap((xId, yId, op))
+      }
+      case "fdiv" => {
+        var divider = new SCSignedFixedGainDivider(math.ceil(yId.toDouble).toInt)
+        opMap += ((xId, yId, "fdiv") -> divider)
+        opMap((xId, yId, op))
+      }
+      case "sqrt" => {
+        var rooter = new SCSquareRoot()
+        opMap += ((xId, yId, "sqrt") -> rooter)
+        opMap((xId, yId, op))
+      }
+    }
+  }
+
+  def sqrt(stream: SBitstream)(implicit id: SimulationId): SBitstream
+    = SimulatableNumeric.SBitstreamIsSimulatable.sqrt(stream)(id.lhs, id.rhs)
 
   def abs(stream: SBitstream): SBitstream = SBitstream.SBitstreamIsFractional.abs(stream)
 
@@ -266,7 +313,7 @@ object SBitstream {
     val Unipolar, Bipolar, SignedMagnitude = Value
   }
 
-  implicit object SBitstreamIsFractional extends Fractional[SBitstream] {
+  trait SBitstreamIsFractional extends Fractional[SBitstream] {
     // Numeric[SBitstream] abstract methods
     def compare(x: SBitstream, y: SBitstream): Int = x.value.compare(y.value)
     def div(x: SBitstream, y: SBitstream): SBitstream = SBitstream(x.value / y.value)
@@ -280,16 +327,17 @@ object SBitstream {
     def toInt(x: SBitstream): Int = x.value.toInt
     def toLong(x: SBitstream): Long = x.value.toLong
   }
+  implicit object SBitstreamIsFractional extends SBitstreamIsFractional
 
   implicit class SBitstreamOps[A](lhs: A)(implicit num: Numeric[A]) {
-    def +(rhs: SBitstream): SBitstream =
-      SBitstream.SBitstreamIsFractional.plus(SBitstream(lhs.toDouble), rhs)
-    def -(rhs: SBitstream): SBitstream =
-      SBitstream.SBitstreamIsFractional.minus(SBitstream(lhs.toDouble), rhs)
-    def *(rhs: SBitstream): SBitstream =
-      SBitstream.SBitstreamIsFractional.times(SBitstream(lhs.toDouble), rhs)
-    def /(rhs: SBitstream): SBitstream =
-      SBitstream.SBitstreamIsFractional.div(SBitstream(lhs.toDouble), rhs)
+    def +(rhs: SBitstream)(implicit id: SimulationId): SBitstream =
+      SimulatableNumeric.SBitstreamIsSimulatable.plus(SBitstream(lhs.toDouble), rhs)(id.lhs, id.rhs)
+    def -(rhs: SBitstream)(implicit id: SimulationId): SBitstream =
+      SimulatableNumeric.SBitstreamIsSimulatable.minus(SBitstream(lhs.toDouble), rhs)(id.lhs, id.rhs)
+    def *(rhs: SBitstream)(implicit id: SimulationId): SBitstream =
+      SimulatableNumeric.SBitstreamIsSimulatable.times(SBitstream(lhs.toDouble), rhs)(id.lhs, id.rhs)
+    def /(rhs: SBitstream)(implicit id: SimulationId): SBitstream =
+      SimulatableNumeric.SBitstreamIsSimulatable.div(SBitstream(lhs.toDouble), rhs)(id.lhs, id.rhs)
   }
 
 }
