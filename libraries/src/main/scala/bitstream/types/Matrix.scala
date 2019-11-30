@@ -140,13 +140,21 @@ case class Matrix[A: ClassTag] (val _numRows:Int, val _numCols:Int)(implicit num
 
   def toArray: Array[Array[A]] = _array
 
-  def T: Matrix[A] = {
-    val result = Matrix[A](_numCols, _numRows)
-    for (i <- 0 until _numCols; j <- 0 until _numRows) {
-      result(i, j) = this(j, i)
-    }
+  def T(implicit id: SimulationId): Matrix[A] = {
+    if (id.lhs == "" && id.rhs == "") {
+      var result = Matrix[A](_numCols, _numRows)
+      for (i <- 0 until _numCols; j <- 0 until _numRows) {
+        result(i, j) = this(j, i)
+      }
 
-    result
+      result
+    } else {
+      var result = (this.T)(SimulationId("", "")).toSBitstream
+      var op = Matrix.findOperator(id.lhs, id.rhs, "transpose", result.rows, result.cols)
+      result.push(op.evaluate(List(this.asInstanceOf[Matrix[SBitstream]].pop)))
+
+      result.asInstanceOf[Matrix[A]]
+    }
   }
 
   def ==(that: Matrix[A]): Boolean = {
@@ -291,6 +299,11 @@ object Matrix {
       case "norm" => {
         var normer = new SCL2Norm(rows)
         opMap += ((xId, yId, "norm") -> normer)
+        opMap((xId, yId, op))
+      }
+      case "transpose" => {
+        var transposer = new SCTranspose()
+        opMap += ((xId, yId, "transpose") -> transposer)
         opMap((xId, yId, op))
       }
     }
@@ -609,6 +622,12 @@ object Matrix {
   }
 
   implicit class MatrixSBitstreamBitLevelOps(lhs: Matrix[SBitstream]) {
+    def genBit: Unit = {
+      for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
+        lhs(i, j).genBit
+      }
+    }
+
     def push(bits: Tuple2[Matrix[Int], Matrix[Int]]): Unit = {
       for (i <- 0 until lhs.rows; j <- 0 until lhs.cols) {
         val pBit = bits._1(i, j)

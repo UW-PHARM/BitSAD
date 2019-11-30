@@ -91,19 +91,19 @@ case class SBitstream(private var _value: Double,
                         SBitstream.Signedness.Unipolar)
   extends Bitstream {
 
-  private var rng = Random
-  private var _bit: Tuple2[Int, Int] = (-1, -1)
+  private var rng = new Random()
+  var _bit: Tuple2[Int, Int] = (-1, -1)
 
   _value = if (_value > 1) 1.0 else _value
   _value = if (_value < -1) -1.0 else _value
 
-  private var positiveValue: Double = 0.0 // dummy value
-  private var negativeValue: Double = 0.0 // dummy value
+  var positiveValue: Double = 0.0 // dummy value
+  var negativeValue: Double = 0.0 // dummy value
 
   signedness match {
     case SBitstream.Signedness.Unipolar => {
       positiveValue = if (_value >= 0) _value else 0.0
-      negativeValue = if (_value < 0) _value else 0.0
+      negativeValue = if (_value < 0) math.abs(_value) else 0.0
     }
     case SBitstream.Signedness.Bipolar =>
       throw new NotImplementedError("No support for bipolar signedness of bitstreams")
@@ -111,6 +111,8 @@ case class SBitstream(private var _value: Double,
       throw new NotImplementedError("No support for signed magnitude signedness of bitstreams")
     case _ => throw new IllegalArgumentException("Unrecognized signedness of SBitstream")
   }
+
+  this.genBit
 
   def value: Double = _value
   def value_=(value: Double) = {
@@ -123,7 +125,7 @@ case class SBitstream(private var _value: Double,
           negativeValue = 0.0
         } else {
           positiveValue = 0.0
-          negativeValue = value
+          negativeValue = math.abs(value)
         }
       }
       case SBitstream.Signedness.Bipolar =>
@@ -134,7 +136,7 @@ case class SBitstream(private var _value: Double,
     }
   }
 
-  private def genBit: (Int, Int) = {
+  def genBit: Unit = {
     var pBit = 0
     var nBit = 0
 
@@ -150,16 +152,17 @@ case class SBitstream(private var _value: Double,
       case _ => throw new IllegalArgumentException("Unrecognized signedness of SBitstream")
     }
 
-    (pBit, nBit)
+    _bit = (pBit, nBit)
   }
 
   def pop: Tuple2[Int, Int] = {
-    if (_bit == (-1, -1)) this.genBit
-    else {
-      val out = _bit
-      _bit = (-1, -1)
-      out
-    }
+    // if (_bit == (-1, -1)) this.genBit
+    // else {
+    //   val out = _bit
+    //   _bit = (-1, -1)
+    //   out
+    // }
+    _bit
   }
 
   def push(x: Tuple2[Int, Int]): Unit = {
@@ -167,10 +170,11 @@ case class SBitstream(private var _value: Double,
   }
 
   def observe: Tuple2[Int, Int] = {
-    if (_bit == (-1, -1)) {
-      _bit = this.genBit
-      _bit
-    } else _bit
+    // if (_bit == (-1, -1)) {
+    //   _bit = this.genBit
+    //   _bit
+    // } else _bit
+    _bit
   }
 
   // def getEstimate: Double = {

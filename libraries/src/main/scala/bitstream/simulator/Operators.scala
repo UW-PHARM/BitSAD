@@ -122,17 +122,21 @@ class SCSignedSaturatingSubtractor() extends Operator {
 
   private var pAdder = new SCAdder()
   private var nAdder = new SCAdder()
-  private var pSub = new SCSaturatingSubtractor()
-  private var nSub = new SCSaturatingSubtractor()
+  private var ppSub = new SCSaturatingSubtractor()
+  private var pnSub = new SCSaturatingSubtractor()
+  private var npSub = new SCSaturatingSubtractor()
+  private var nnSub = new SCSaturatingSubtractor()
 
   override def evaluate(inputs: List[Tuple2[Int, Int]]): (Int, Int) = {
     val a = inputs(0)
     val b = inputs(1)
 
-    val pp = pAdder.evaluate(a._1, b._1)
-    val nn = nAdder.evaluate(a._2, b._2)
-    val c1 = pSub.evaluate(pp, nn)
-    val c2 = nSub.evaluate(nn, pp)
+    val pp = ppSub.evaluate(a._1, b._1)
+    val pn = pnSub.evaluate(b._1, a._1)
+    val np = npSub.evaluate(a._2, b._2)
+    val nn = nnSub.evaluate(b._2, a._2)
+    val c1 = pAdder.evaluate(pp, np)
+    val c2 = nAdder.evaluate(pn, nn)
 
     (c1, c2)
   }
@@ -198,13 +202,13 @@ class SCSignedMatrixMultiplier(numRows: Int, numCols: Int) extends MatrixOperato
     val s13 = sub13.evaluate(np, nn)
     val s14 = sub14.evaluate(nn, np)
 
-    val s21 = sub21.evaluate(s11, s14)
-    val s22 = sub22.evaluate(s12, s13)
-    val s23 = sub23.evaluate(s13, s12)
-    val s24 = sub24.evaluate(s14, s11)
+    // val s21 = sub21.evaluate(s11, s14)
+    // val s22 = sub22.evaluate(s12, s13)
+    // val s23 = sub23.evaluate(s13, s12)
+    // val s24 = sub24.evaluate(s14, s11)
 
-    val c1 = pAdder.evaluate(s21, s23)
-    val c2 = nAdder.evaluate(s22, s24)
+    val c1 = pAdder.evaluate(s11, s14)
+    val c2 = nAdder.evaluate(s12, s13)
 
     (c1, c2)
   }
@@ -242,13 +246,13 @@ class SCSignedMultiplier() extends Operator {
     val s13 = sub13.evaluate(np, nn)
     val s14 = sub14.evaluate(nn, np)
 
-    val s21 = sub21.evaluate(s11, s14)
-    val s22 = sub22.evaluate(s12, s13)
-    val s23 = sub23.evaluate(s13, s12)
-    val s24 = sub24.evaluate(s14, s11)
+    // val s21 = sub21.evaluate(s11, s14)
+    // val s22 = sub22.evaluate(s12, s13)
+    // val s23 = sub23.evaluate(s13, s12)
+    // val s24 = sub24.evaluate(s14, s11)
 
-    val c1 = pAdder.evaluate(s21, s23)
-    val c2 = nAdder.evaluate(s22, s24)
+    val c1 = pAdder.evaluate(s11, s14)
+    val c2 = nAdder.evaluate(s12, s13)
 
     (c1, c2)
   }
@@ -308,13 +312,14 @@ class SCSignedDivider() extends Operator {
     val s13 = sub13.evaluate(np, nn)
     val s14 = sub14.evaluate(nn, np)
 
-    val s21 = sub21.evaluate(s11, s14)
-    val s22 = sub22.evaluate(s12, s13)
-    val s23 = sub23.evaluate(s13, s12)
-    val s24 = sub24.evaluate(s14, s11)
+    // val s21 = sub21.evaluate(s11, s14)
+    // val s22 = sub22.evaluate(s12, s13)
+    // val s23 = sub23.evaluate(s13, s12)
+    // val s24 = sub24.evaluate(s14, s11)
 
-    val c1 = pAdder.evaluate(s21, s23)
-    val c2 = nAdder.evaluate(s22, s24)
+    // why is this flipped??
+    val c1 = pAdder.evaluate(s12, s13)
+    val c2 = nAdder.evaluate(s11, s14)
 
     (c1, c2)
   }
@@ -381,17 +386,31 @@ class SCSquareRoot() extends Operator {
 
 }
 
+class SCTranspose() extends MatrixOperator {
+
+  override def evaluate(inputs: List[Tuple2[Matrix[Int], Matrix[Int]]]):
+      (Matrix[Int], Matrix[Int]) = {
+    val A = inputs(0)
+
+    (A._1.T, A._2.T)
+  }
+
+}
+
 class SCL2Norm(length: Int) extends MatrixOperator {
 
+  private var transpose = new SCTranspose()
+  private var decorr = new Decorrelator(1, length)
   private var dot = new SCSignedMatrixMultiplier(1, 1)
   private var root = new SCSquareRoot()
 
   override def evaluate(inputs: List[Tuple2[Matrix[Int], Matrix[Int]]]):
       (Matrix[Int], Matrix[Int]) = {
     val A = inputs(0)
-    val At = (A._1.T, A._2.T)
+    val At = decorr.evaluate(transpose.evaluate(inputs))
 
     val B = dot.evaluate(List(At, A))
+    // println(s"${B._1(0, 0)}, ${B._2(0, 0)})")
     val c = root.evaluate(List((B._1(0, 0), B._2(0, 0))))
 
     (Matrix(Array(Array(c._1))), Matrix(Array(Array(c._2))))
