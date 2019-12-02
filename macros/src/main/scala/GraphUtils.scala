@@ -5,18 +5,14 @@ import scalax.collection.mutable.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.edge.LDiEdge     // labeled directed edge
 import scalax.collection.edge.Implicits._ // shortcuts
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
-import scala.reflect.macros.Context
 
 // implicit casting for labeled edges
 import scalax.collection.edge.LBase.LEdgeImplicits
 object LabelTypeImplicit extends LEdgeImplicits[HashSet[Int]]; import LabelTypeImplicit._
 
-case class OpNode(val op: String, private var _inputs: List[String], private var _output: String) {
+case class OpNode(val op: String, private var _output: String) {
 
-  // private var _inSets = new List[HashSet[Int]]()
-  // private var _outSet = new Set[Int]()
+  private var _inputs: List[String] = List[String]()
 
   def inputs: List[String] = _inputs
   def inputs_=(inputs: List[String]) = {
@@ -28,37 +24,11 @@ case class OpNode(val op: String, private var _inputs: List[String], private var
     _output = output
   }
 
-  def ==(that: OpNode): Boolean =
-    (this.op == that.op) && (this.output == that.output) && this.inputs.zip(that.inputs).forall((x: Tuple2[String, String]) => x._1 == x._2)
-
-  // def inSets: List[Set[Int]] = _inSets
-  // def addInSet(set: Set[Int]): Unit = {
-  //   _inSets = _inSets :+ set
-  //   OpNode._setOutSet(this)
-  // }
-
-  // // def isCorrelated: Boolean = _inSets.map((x: HashSet[Int]) =>
-  // //                                           (_inSets - x).foldLeft(false)((acc: Boolean, y: HashSet[Int]) => acc || (x & y).nonEmpty))
-  // def isCorrelated: Boolean = OpNode._checkCorrelation(this)
-
-  // def outSet: Set[Int] = _outSet
+  def equals(that: OpNode): Boolean =
+    (this.op == that.op) && (this.output == that.output)
+  def ==(that: OpNode): Boolean = this == that
 
 }
-
-// object OpNode {
-
-//   private def _setOutSet(node: OpNode): Unit = node.op match {
-//     case "Decorrelator" => {}
-//     case _ => node._outSet = node._inSets.foldLeft(new HashSet[Int]())(++)
-//   }
-
-//   private def _checkCorrelation(node: OpNode): Boolean = node.op match {
-//     case "Decorrelator" => false
-//     case _ =>
-//       node._inSets.foldLeft(new HashSet[Int]())(++).size == node._inSets.foldLeft(0)((acc: Int, x: HashSet[Int]) => acc + x.size)
-//   }
-
-// }
 
 object GraphUtils {
 
@@ -69,7 +39,7 @@ object GraphUtils {
     currentIndex
   }
 
-  def printGraph(g: Graph[OpNode, LDiEdge], start: OpNode, level: Int): Unit = {
+  def printGraphByLevel(g: Graph[OpNode, LDiEdge], start: OpNode, level: Int): Unit = {
     var root = g get start
     var padding = "  " * level
     println(s"${padding}op: ${start.op}")
@@ -77,9 +47,17 @@ object GraphUtils {
     println(s"${padding}out set: ${getOutSet(g, start)}")
     println(s"${padding}srcs: ${start.inputs}")
     for (dest <- root.outNeighbors.toList.map(_.toOuter)) {
-      printGraph(g, dest, level + 1)
+      printGraphByLevel(g, dest, level + 1)
     }
   }
+
+  def printGraph(g: Graph[OpNode, LDiEdge]): Unit = {
+    var starts = getLeaves(g)
+    starts.foreach(printGraphByLevel(g, _, 0))
+  }
+
+  def getLeaves(g: Graph[OpNode, LDiEdge]): List[OpNode] =
+    (g.nodes filter ((x: Graph[OpNode, LDiEdge]#NodeT) => x.diPredecessors.isEmpty)).toList.map(_.toOuter)
 
   def isNodeCorrelated(g: Graph[OpNode, LDiEdge], node: OpNode): Boolean = {
     var inSets: List[HashSet[Int]] = (g get node).incoming.toList.map(innerEdge2UserLabel(_))
@@ -94,7 +72,7 @@ object GraphUtils {
     g.nodes.toOuter.toList.foldLeft(false)((acc: Boolean, x: OpNode) => acc || isNodeCorrelated(g, x))
 
   def getOutSet(g: Graph[OpNode, LDiEdge], node: OpNode): HashSet[Int] = node.op match {
-    case "Variable" => {
+    case "Variable" | "Decorrelator" => {
       var innerNode = g get node
       var outEdges = innerNode.outgoing.toList.map(innerEdge2UserLabel(_))
 
@@ -127,11 +105,11 @@ object GraphUtils {
 
   def addEndPoints(g: Graph[OpNode, LDiEdge]): Graph[OpNode, LDiEdge] = {
     var newGraph = g
-    var starts = (g.nodes filter ((x: Graph[OpNode, LDiEdge]#NodeT) => x.diPredecessors.isEmpty)).toList.map(_.toOuter)
+    var starts = getLeaves(newGraph)
 
     for (start <- starts) {
       for (input <- start.inputs) {
-        newGraph = addOp(newGraph, OpNode("Variable", List[String](), input))
+        newGraph = addOp(newGraph, OpNode("Variable", input))
       }
     }
 
@@ -157,8 +135,7 @@ object GraphUtils {
 
   def updateIndexSets(g: Graph[OpNode, LDiEdge]): Graph[OpNode, LDiEdge] = {
     var newGraph = g
-    var starts: Set[OpNode] = (g.nodes filter ((x: Graph[OpNode, LDiEdge]#NodeT) => x.diPredecessors.isEmpty)).toSet.map(
-                                    (x: Graph[OpNode, LDiEdge]#NodeT) => x.toOuter)
+    var starts: Set[OpNode] = getLeaves(newGraph).toSet
 
     while (starts.nonEmpty) _updateIndexSetByLevel(newGraph, starts) match {
       case (graph, parents) => {

@@ -6,6 +6,7 @@ import scalax.collection.mutable.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
 import scalax.collection.edge.LDiEdge     // labeled directed edge
 import bitstream.macros.internal._
+import bitstream.macros.decorrinsertion._
 
 object Macros {
 
@@ -25,7 +26,8 @@ object Macros {
           var newGraph = vsrc.foldLeft(g)(body)
 
           var inputs = vsrc.map(_.toString)
-          var node = OpNode(src.toString, inputs, output)
+          var node = OpNode(src.toString, output)
+          node.inputs = inputs
 
           GraphUtils.addOp(g, node)
         }
@@ -35,7 +37,8 @@ object Macros {
           var newGraph = addStatement(g, src1, src1.toString)
 
           var inputs = List(src1.toString)
-          var node = OpNode(op.toString, inputs, output)
+          var node = OpNode(op.toString, output)
+          node.inputs = inputs
 
           GraphUtils.addOp(newGraph, node)
         }
@@ -44,7 +47,8 @@ object Macros {
           newGraph = addStatement(g, src2, src2.toString)
 
           var inputs = List(src1.toString, src2.toString)
-          var node = OpNode(op.toString, inputs, output)
+          var node = OpNode(op.toString, output)
+          node.inputs = inputs
 
           GraphUtils.addOp(newGraph, node)
         }
@@ -53,7 +57,8 @@ object Macros {
           newGraph = addStatement(g, src2, src2.toString)
 
           var inputs = List(src1.toString, src2.toString)
-          var node = OpNode(op.toString, inputs, output)
+          var node = OpNode(op.toString, output)
+          node.inputs = inputs
 
           GraphUtils.addOp(newGraph, node)
         }
@@ -71,11 +76,13 @@ object Macros {
 
         dfg = GraphUtils.addEndPoints(dfg)
         dfg = GraphUtils.updateIndexSets(dfg)
+        println("Pre-Decorrelation:")
+        GraphUtils.printGraph(dfg)
 
-        var starts = (dfg.nodes filter ((x: Graph[OpNode, LDiEdge]#NodeT) => x.diPredecessors.isEmpty)).toList.map(_.toOuter)
-        for (start <- starts) {
-          GraphUtils.printGraph(dfg, start, 0)
-        }
+        dfg = GreedyAlgorithm.execute(dfg)
+
+        println("Post-Decorrelation:")
+        GraphUtils.printGraph(dfg)
 
         println(s"Correlated: ${GraphUtils.isGraphCorrelated(dfg)}")
         expr.tree
