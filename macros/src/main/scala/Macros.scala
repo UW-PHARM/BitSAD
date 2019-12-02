@@ -4,6 +4,7 @@ import scala.language.experimental.macros
 import scala.reflect.macros.whitebox.Context
 import scalax.collection.mutable.Graph
 import scalax.collection.GraphPredef._, scalax.collection.GraphEdge._
+import scalax.collection.edge.LDiEdge     // labeled directed edge
 import bitstream.macros.internal._
 
 object Macros {
@@ -13,14 +14,14 @@ object Macros {
   def decorrelate_impl(c: Context)(expr: c.Expr[Any]): c.Expr[Any] = {
     import c.universe._
 
-    var dfg = Graph[OpNode, DiEdge]()
+    var dfg = Graph[OpNode, LDiEdge]()
 
-    def addStatement(g: Graph[OpNode, DiEdge], statement: Tree, output: String):
-        Graph[OpNode, DiEdge] = {
+    def addStatement(g: Graph[OpNode, LDiEdge], statement: Tree, output: String):
+        Graph[OpNode, LDiEdge] = {
       if (statement.children.length == 0) g
       else statement match {
         case Apply(Select(src, op), vsrc) if op.toString.trim == "loop" => {
-          val body = (g: Graph[OpNode, DiEdge], x: Tree) => addStatement(g, x, x.toString)
+          val body = (g: Graph[OpNode, LDiEdge], x: Tree) => addStatement(g, x, x.toString)
           var newGraph = vsrc.foldLeft(g)(body)
 
           var inputs = vsrc.map(_.toString)
@@ -68,10 +69,15 @@ object Macros {
           case _ => throw new Exception(s"Unrecognized statement: $statement")
         }
 
-        var starts = (dfg.nodes filter ((x: Graph[OpNode, DiEdge]#NodeT) => x.diPredecessors.isEmpty)).toList.map(_.toOuter)
+        dfg = GraphUtils.addEndPoints(dfg)
+        dfg = GraphUtils.updateIndexSets(dfg)
+
+        var starts = (dfg.nodes filter ((x: Graph[OpNode, LDiEdge]#NodeT) => x.diPredecessors.isEmpty)).toList.map(_.toOuter)
         for (start <- starts) {
           GraphUtils.printGraph(dfg, start, 0)
         }
+
+        println(s"Correlated: ${GraphUtils.isGraphCorrelated(dfg)}")
         expr.tree
       }
       case _ => expr.tree
