@@ -2,7 +2,7 @@ package bitstream.simulator.internal.units
 
 import math._
 import scala.util.Random
-import bitstream.simulator.units.Decorrelator
+import bitstream.simulator.units.{Decorrelator, MersenneTwister}
 import bitstream.types.Matrix
 import bitstream.types.SimulatableNumeric._
 
@@ -263,14 +263,14 @@ class SCDivider() {
 
   private var counter = 0
   private var bAnd = 0
-  private var rng = Random
+  private var rng = new MersenneTwister(Random.nextInt())
 
   def evaluate(a: Int, b: Int): Int = {
     // Update counter
     counter = math.max(counter + 2 * a - 2 * bAnd, -100)
 
     // Decide output
-    val r = math.round(rng.nextInt(65))
+    val r = rng.nextInt(65)
     val c = if (counter > r) 1 else 0
 
     // Update bAnd
@@ -366,6 +366,7 @@ class SCSquareRoot() extends Operator {
   private var counter = 0
   private var bAnd = 0
   private var decorr = Decorrelator(1, 1)
+  private var rng = new MersenneTwister(Random.nextInt())
 
   override def evaluate(inputs: List[Tuple2[Int, Int]]): (Int, Int) = {
     val a = inputs(0)
@@ -374,7 +375,7 @@ class SCSquareRoot() extends Operator {
     counter = math.max(counter + 4 * a._1 - 4 * bAnd, -100)
 
     // Decide output
-    val r = math.round(512 * math.random())
+    val r = rng.nextInt(256)
     val b = if (counter >= r) 1 else 0
 
     // Update bAnd
@@ -410,10 +411,10 @@ class SCL2Norm(length: Int) extends MatrixOperator {
     val At = decorr.evaluate(transpose.evaluate(inputs))
 
     val B = dot.evaluate(List(At, A))
-    // println(s"${B._1(0, 0)}, ${B._2(0, 0)})")
-    val c = root.evaluate(List((B._1(0, 0), B._2(0, 0))))
+    // val c = root.evaluate(List((B._1(0, 0), B._2(0, 0))))
 
-    (Matrix(Array(Array(c._1))), Matrix(Array(Array(c._2))))
+    // (Matrix(Array(Array(c._1))), Matrix(Array(Array(c._2))))
+    B
   }
 
 }

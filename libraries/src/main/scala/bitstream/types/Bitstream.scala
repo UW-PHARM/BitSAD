@@ -8,6 +8,7 @@ import reflect._
 import scala.reflect.runtime.universe._
 import scala.util.Random
 import bitstream.simulator.internal.units._
+import bitstream.simulator.units.MersenneTwister
 import scala.io.Source
 import java.io.{File, FileWriter, BufferedWriter}
 
@@ -91,7 +92,7 @@ case class SBitstream(private var _value: Double,
                         SBitstream.Signedness.Unipolar)
   extends Bitstream {
 
-  private var rng = new Random()
+  private var rng = SBitstream.rng
   var _bit: Tuple2[Int, Int] = (-1, -1)
 
   _value = if (_value > 1) 1.0 else _value
@@ -269,6 +270,7 @@ case class SBitstream(private var _value: Double,
 
 object SBitstream {
 
+  private var rng = new MersenneTwister(Random.nextInt())
   private var opMap: Map[Tuple3[String, String, String], Operator] = Map()
 
   def findOperator(xId: String, yId: String, op: String): Operator = {
