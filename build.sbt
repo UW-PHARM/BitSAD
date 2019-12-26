@@ -29,6 +29,7 @@ lazy val macros = (project in file("macros"))
   .settings(
     commonSettings,
     name := "bitsad-macros",
+    // libraryDependencies += "org.scalameta" %% "scalameta" % "4.3.0",
     libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
   )
 

@@ -1,7 +1,7 @@
 package bitstream.macros
 
 import scala.language.experimental.macros
-import scala.reflect.macros.blackbox.Context
+import scala.reflect.macros.whitebox.Context
 
 object Macros {
 
@@ -10,9 +10,9 @@ object Macros {
   def simulatable_impl[T](c: Context)(expr: c.Expr[T]): c.Expr[T] = {
     import c.universe._
 
-    implicit class Regex(sc: StringContext) {
-      def r = new util.matching.Regex(sc.parts.mkString, sc.parts.tail.map(_ => "x"): _*)
-    }
+    // implicit class Regex(sc: StringContext) {
+    //   def r = new util.matching.Regex(sc.parts.mkString, sc.parts.tail.map(_ => "x"): _*)
+    // }
 
     def checkDefaultId(src: Tree) = src.toString match {
       case "types.this.SimulationId.DefaultId" => true
