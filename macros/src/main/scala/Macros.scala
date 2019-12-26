@@ -1,7 +1,7 @@
 package bitstream.macros
 
 import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.blackbox.Context
 
 object Macros {
 
@@ -44,7 +44,7 @@ object Macros {
         var newSrc1 = addSimulationId(src1)
 
         // treeCopy.Apply(statement, Select(newSrc1, TermName(op)), newSrcs)
-        atPos(statement.pos.focus)(q"$src1.${TermName(op)}(..$newSrcs)")
+        c.typecheck(q"$src1.${TermName(op)}(..$newSrcs)")
       }
       case Apply(Apply(Select(src1, TermName(op)), List(src2)), srcs) => {
         println(s"3-Function: ($src1 $op $src2)($srcs)")
@@ -69,7 +69,7 @@ object Macros {
         var newSrc2 = addSimulationId(src2)
 
         // treeCopy.Apply(statement, Apply(Select(newSrc1, TermName(op)), List(newSrc2)), newSrcs)
-        atPos(statement.pos.focus)(q"($src1 ${TermName(op)} $src2)(..$newSrcs)")
+        c.typecheck(q"($src1 ${TermName(op)} $src2)(..$newSrcs)")
       }
       case _ => {
         println(showRaw(statement))
@@ -81,8 +81,8 @@ object Macros {
       case Block(statements, ret) => {
         var newStatements =
           for (statement <- statements) yield statement match {
-            case Assign(opd, rhs) => treeCopy.Assign(statement, opd, addSimulationId(rhs))
-            case ValDef(mods, opd, tpt, rhs) => treeCopy.ValDef(statement, mods, opd, tpt, addSimulationId(rhs))
+            case Assign(opd, rhs) => Assign(opd, addSimulationId(rhs))
+            case ValDef(mods, opd, tpt, rhs) => ValDef(mods, opd, tpt, addSimulationId(rhs))
             case _ => statement
           }
 
