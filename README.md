@@ -105,6 +105,9 @@ object IterativeSVD {
 
 The BitBench folder is a Git submodule. When you clone this repo, add the `--recursive` flag to your Git command to also clone the BitBench repo.
 
+## Experimental Features
+Currently the `simulatable` and `pop` macros that enable bit-level simulation and population coding automatically are only available on the `master` branch. There are issues related to the Scala compiler that are preventing these features from being pulled into a release. We expect to fix this in the coming weeks.
+
 ## Contributing
 
 We welcome all kinds of contributions including PRs, sample code, and issues.
