@@ -1,6 +1,13 @@
 # BitSAD
 [![Build Status](https://travis-ci.com/UW-PHARM/BitSAD.svg?branch=master)](https://travis-ci.com/UW-PHARM/BitSAD)
 
+_**⚠️⚠️⚠️ WARNING: ⚠️⚠️⚠️**_
+
+_**This package has been re-written in Julia. Please see https://github.com/UW-PHARM/BitSAD.jl.
+The Scala version is no longer maintained (or as feature-rich as the Julia package).**_
+
+----
+
 A domain-specific language for bitstream computing.
 
 ### Citation
